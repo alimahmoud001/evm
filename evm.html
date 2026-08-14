@@ -1,0 +1,1896 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>محفظة متعددة الشبكات</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: #080808; color: #f0f4f8; min-height: 100vh;
+            display: flex; align-items: flex-start; justify-content: center; }
+        .app-container { max-width: 520px; width: 100%; margin: 0 auto; background: #0f0f0f;
+            border-radius: 12px; padding: 16px 12px 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8); min-height: 100vh; }
+        #loginSection { display: flex; flex-direction: column; align-items: center;
+            justify-content: center; min-height: 70vh; gap: 24px; padding: 20px 4px; }
+        #loginSection .logo { font-size: 32px; font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #loginSection .sub { color: #94a3b8; font-size: 14px; text-align: center;
+            line-height: 1.6; max-width: 280px; }
+        #loginSection input { width: 100%; padding: 14px 16px; border-radius: 12px;
+            border: 1px solid #2a2a3a; background: #141414; color: #fff; font-size: 15px;
+            outline: none; transition: 0.3s; text-align: center; direction: ltr;
+            font-family: 'JetBrains Mono', monospace; }
+        #loginSection input:focus { border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59,130,246,0.2); }
+        .btn-primary { width: 100%; padding: 14px; border: none; border-radius: 12px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff;
+            font-size: 17px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-primary:active { transform: scale(0.97); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { width: 100%; padding: 13px; border: 1px solid #2a2a3a; border-radius: 12px;
+            background: transparent; color: #94a3b8; font-size: 16px; font-weight: 500;
+            cursor: pointer; transition: 0.2s; }
+        .btn-secondary:active { transform: scale(0.97); }
+        .btn-danger { width: 100%; padding: 13px; border: none; border-radius: 12px;
+            background: #dc2626; color: #fff; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: 0.2s; }
+        .btn-success { width: 100%; padding: 13px; border: none; border-radius: 12px;
+            background: #16a34a; color: #fff; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: 0.2s; }
+        .flex-row { display: flex; gap: 8px; }
+        .flex-row .btn-primary, .flex-row .btn-secondary, .flex-row .btn-danger, .flex-row .btn-success { flex: 1; }
+        #walletSection { display: none; flex-direction: column; gap: 16px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+        .header .address-badge { background: #1a1a2a; padding: 6px 14px; border-radius: 30px;
+            font-size: 13px; color: #93bbfc; direction: ltr; display: inline-flex;
+            align-items: center; gap: 8px; border: 1px solid #2a2a3a; max-width: 70%;
+            overflow: hidden; white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
+        .header .address-badge .copy-btn { background: none; border: none; color: #64748b;
+            cursor: pointer; font-size: 14px; padding: 0 4px; }
+        .header .address-badge .copy-btn:hover { color: #93bbfc; }
+        .header .logout-btn { background: transparent; border: 1px solid #2a2a3a; color: #94a3b8;
+            padding: 6px 14px; border-radius: 30px; font-size: 13px; cursor: pointer; }
+        .header .logout-btn:hover { border-color: #ef4444; color: #ef4444; }
+        .total-balance { background: linear-gradient(135deg, #1a1a2e, #0f0f1f);
+            border: 1px solid #2a2a3a; border-radius: 16px; padding: 16px 20px; text-align: center; }
+        .total-balance .label { font-size: 13px; color: #94a3b8; }
+        .total-balance .amount { font-size: 30px; font-weight: 700; color: #fff;
+            direction: ltr; font-family: 'JetBrains Mono', monospace; }
+        .total-balance .amount small { font-size: 16px; font-weight: 400; color: #94a3b8; }
+        .tabs { display: flex; gap: 4px; background: #121212; border-radius: 14px;
+            padding: 4px; border: 1px solid #1e1e2e; }
+        .tabs button { flex: 1; padding: 10px 0; border: none; border-radius: 10px;
+            background: transparent; color: #64748b; font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: 0.3s; }
+        .tabs button.active { background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff;
+            box-shadow: 0 4px 16px rgba(59,130,246,0.3); }
+        .tab-content { display: none; flex-direction: column; gap: 14px; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); } }
+        .card { background: rgba(20,20,28,0.8); border-radius: 16px;
+            padding: 18px; border: 1px solid #2a2a3a; }
+        .card-title { font-size: 15px; color: #94a3b8; margin-bottom: 14px;
+            font-weight: 600; display: flex; align-items: center; gap: 8px; }
+
+        /* Overview Items */
+        .overview-item { display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; background: rgba(10,10,18,0.7); border-radius: 14px;
+            cursor: pointer; transition: 0.2s; border: 1px solid transparent; margin-bottom: 8px; }
+        .overview-item:hover { border-color: #3b82f6; background: rgba(20,20,40,0.8); }
+        .overview-item .left { display: flex; align-items: center; gap: 14px; }
+        .overview-item .token-icon { width: 44px; height: 44px; border-radius: 50%;
+            background: #1a1a2a; display: flex; align-items: center; justify-content: center;
+            border: 1px solid #2a2a3a; overflow: hidden; flex-shrink: 0; }
+        .overview-item .token-icon img { width: 32px; height: 32px; border-radius: 50%; object-fit: contain; }
+        .overview-item .token-icon .fallback { width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-weight: 700;
+            font-size: 14px; color: #fff; }
+        .overview-item .symbol { font-weight: 700; font-size: 16px; color: #f0f4f8; }
+        .overview-item .network-tag { font-size: 10px; color: #94a3b8; background: #1a1a2a;
+            padding: 2px 10px; border-radius: 30px; display: inline-block; margin-top: 2px; }
+        .overview-item .right { text-align: left; direction: ltr; }
+        .overview-item .balance { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 600; }
+        .overview-item .usd { font-size: 13px; color: #4ade80; font-weight: 500; }
+
+        /* Form Elements */
+        .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+        .form-group label { font-size: 13px; color: #94a3b8; font-weight: 600; }
+        .form-group input { padding: 12px 14px; border-radius: 12px;
+            border: 1px solid #2a2a3a; background: #0a0a12; color: #fff; font-size: 15px;
+            outline: none; transition: 0.3s; width: 100%; font-family: 'JetBrains Mono', monospace; }
+        .form-group input:focus { border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59,130,246,0.1); }
+        .form-group .input-hint { font-size: 12px; color: #64748b; margin-top: 2px; }
+        .form-group .max-btn { background: #1a1a2a; border: none; color: #93bbfc;
+            padding: 6px 14px; border-radius: 30px; font-size: 12px; cursor: pointer; }
+        .form-group .max-btn:hover { background: #2a2a3a; }
+
+        /* Network Select with Icons */
+        .network-select-wrapper { position: relative; }
+        .network-select-display { display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+            border-radius: 12px; border: 1px solid #2a2a3a; background: #0a0a12; color: #fff;
+            font-size: 15px; cursor: pointer; transition: 0.3s; }
+        .network-select-display:hover { border-color: #3b82f6; }
+        .network-select-display .net-icon { width: 28px; height: 28px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 14px;
+            font-weight: 700; color: #fff; flex-shrink: 0; }
+        .network-select-display .net-info { display: flex; flex-direction: column; }
+        .network-select-display .net-name { font-weight: 600; font-size: 14px; }
+        .network-select-display .net-label { font-size: 11px; color: #64748b; }
+        .network-select-display .arrow { margin-right: auto; color: #64748b; font-size: 12px; }
+        .network-dropdown { position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
+            background: #141414; border: 1px solid #2a2a3a; border-radius: 12px;
+            max-height: 280px; overflow-y: auto; z-index: 100; display: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        .network-dropdown.show { display: block; }
+        .network-option { display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+            cursor: pointer; transition: 0.15s; border-bottom: 1px solid #1a1a2a; }
+        .network-option:last-child { border-bottom: none; }
+        .network-option:hover { background: #1a1a2a; }
+        .network-option .net-icon { width: 28px; height: 28px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 14px;
+            font-weight: 700; color: #fff; flex-shrink: 0; }
+        .network-option .net-info { display: flex; flex-direction: column; }
+        .network-option .net-name { font-size: 14px; color: #f0f4f8; font-weight: 600; }
+        .network-option .net-label { font-size: 11px; color: #64748b; }
+        .network-option .chain-id { margin-right: auto; font-size: 11px; color: #475569;
+            background: #1a1a2a; padding: 2px 8px; border-radius: 20px; }
+
+        /* Token Select with Icons */
+        .token-select-wrapper { position: relative; }
+        .token-select-display { display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+            border-radius: 12px; border: 1px solid #2a2a3a; background: #0a0a12; color: #fff;
+            font-size: 15px; cursor: pointer; transition: 0.3s; }
+        .token-select-display:hover { border-color: #3b82f6; }
+        .token-select-display .tok-icon { width: 26px; height: 26px; border-radius: 50%;
+            object-fit: contain; }
+        .token-select-display .tok-fallback { width: 26px; height: 26px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 12px;
+            font-weight: 700; color: #fff; }
+        .token-select-display .arrow { margin-right: auto; color: #64748b; font-size: 12px; }
+        .token-dropdown { position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
+            background: #141414; border: 1px solid #2a2a3a; border-radius: 12px;
+            max-height: 200px; overflow-y: auto; z-index: 100; display: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        .token-dropdown.show { display: block; }
+        .token-option { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+            cursor: pointer; transition: 0.15s; }
+        .token-option:hover { background: #1a1a2a; }
+        .token-option .tok-icon { width: 24px; height: 24px; border-radius: 50%; object-fit: contain; }
+        .token-option .tok-fallback { width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 11px;
+            font-weight: 700; color: #fff; }
+        .token-option .tok-name { font-size: 14px; color: #f0f4f8; }
+
+        /* Hidden native select */
+        .hidden-select { display: none; }
+
+        /* TX Details */
+        .tx-data { background: #0a0a12; padding: 14px; border-radius: 12px; font-size: 12px;
+            direction: ltr; word-break: break-all; font-family: 'JetBrains Mono', monospace;
+            color: #93bbfc; border: 1px solid #1e1e2e; max-height: 160px; overflow-y: auto;
+            position: relative; white-space: pre-wrap; }
+        .tx-data .copy-btn { position: absolute; left: 8px; top: 8px; background: #1a1a2a;
+            border: none; color: #93bbfc; padding: 2px 12px; border-radius: 30px;
+            font-size: 10px; cursor: pointer; }
+        .tx-details { font-size: 13px; line-height: 1.8; color: #e2e8f0; }
+        .tx-details span { color: #94a3b8; }
+        .tx-details .val { color: #93bbfc; direction: ltr; font-family: 'JetBrains Mono', monospace; }
+        .gas-cost-usdt { background: rgba(38,161,123,0.1); border: 1px solid rgba(38,161,123,0.3);
+            border-radius: 10px; padding: 10px 14px; margin-top: 8px; }
+        .gas-cost-usdt .label { color: #4ade80; font-size: 12px; font-weight: 600; }
+        .gas-cost-usdt .value { color: #4ade80; font-size: 18px; font-weight: 700;
+            direction: ltr; font-family: 'JetBrains Mono', monospace; }
+
+        /* QR & Scanner */
+        .qr-container { display: flex; justify-content: center; padding: 8px 0; }
+        #receiveQr { background: #fff; padding: 12px; border-radius: 14px; }
+        #receiveQr img, #receiveQr canvas { display: block; width: 100% !important;
+            max-width: 280px !important; height: auto !important; }
+        .scanner-container { position: relative; border-radius: 14px; overflow: hidden;
+            background: #000; min-height: 180px; display: flex; align-items: center; justify-content: center; }
+        .scan-toggle { background: #1a1a2a; border: none; color: #93bbfc; padding: 6px 16px;
+            border-radius: 30px; font-size: 12px; cursor: pointer; margin-bottom: 6px; }
+        .scan-toggle.active { background: linear-gradient(135deg, #3b82f6, #6366f1); color: #fff; }
+
+        /* Countdown */
+        .countdown-box { background: #1a0a0a; border: 1px solid #dc2626; border-radius: 14px;
+            padding: 16px; text-align: center; }
+        .countdown-box .timer { font-size: 40px; font-weight: 700; color: #f87171;
+            direction: ltr; font-family: 'JetBrains Mono', monospace; }
+
+        /* ===== HISTORY - CLEAN DESIGN ===== */
+        .history-controls { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+        .history-network-tabs { display: flex; gap: 4px; background: #121212; border-radius: 14px;
+            padding: 4px; border: 1px solid #1e1e2e; overflow-x: auto; }
+        .history-network-tabs::-webkit-scrollbar { display: none; }
+        .history-network-tabs .net-tab { flex: 1; min-width: 70px; padding: 10px 0; border: none;
+            border-radius: 10px; background: transparent; color: #64748b; font-size: 12px;
+            font-weight: 600; cursor: pointer; transition: 0.3s; white-space: nowrap; }
+        .history-network-tabs .net-tab.active { background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: #fff; box-shadow: 0 4px 16px rgba(59,130,246,0.3); }
+        .history-network-tabs .net-tab .net-dot { display: inline-block; width: 8px; height: 8px;
+            border-radius: 50%; margin-left: 4px; }
+        .history-search { position: relative; }
+        .history-search input { width: 100%; padding: 10px 14px 10px 40px; border-radius: 12px;
+            border: 1px solid #2a2a3a; background: #0a0a12; color: #fff; font-size: 14px;
+            outline: none; font-family: 'JetBrains Mono', monospace; }
+        .history-search input:focus { border-color: #3b82f6; }
+        .history-search .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: #64748b; font-size: 14px; }
+        .history-stats { display: flex; justify-content: space-between; align-items: center;
+            font-size: 12px; color: #64748b; padding: 0 4px; }
+        .history-stats .count { color: #93bbfc; font-weight: 600; }
+
+        .history-item { padding: 14px; background: rgba(10,10,18,0.7); border-radius: 14px;
+            border: 1px solid transparent; margin-bottom: 8px; transition: 0.2s; }
+        .history-item:hover { border-color: #3b82f6; background: rgba(20,20,40,0.8); }
+        .history-item .h-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .history-item .h-left { display: flex; align-items: center; gap: 10px; }
+        .history-item .h-icon { width: 36px; height: 36px; border-radius: 50%; background: #1a1a2a;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid #2a2a3a; overflow: hidden; flex-shrink: 0; }
+        .history-item .h-icon img { width: 24px; height: 24px; border-radius: 50%; object-fit: contain; }
+        .history-item .h-icon .fallback { width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 12px;
+            font-weight: 700; color: #fff; }
+        .history-item .h-info { display: flex; flex-direction: column; }
+        .history-item .h-token-name { font-weight: 700; font-size: 15px; color: #f0f4f8; }
+        .history-item .h-net-badge { font-size: 10px; color: #94a3b8; background: #1a1a2a;
+            padding: 2px 8px; border-radius: 30px; display: inline-block; margin-top: 2px; width: fit-content; }
+        .history-item .h-right { text-align: left; direction: ltr; }
+        .history-item .h-amount { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; }
+        .history-item .h-amount.positive { color: #4ade80; }
+        .history-item .h-amount.negative { color: #f87171; }
+        .history-item .h-usd { font-size: 12px; color: #64748b; }
+        .history-item .h-footer { display: flex; justify-content: space-between; align-items: center;
+            margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a2a; }
+        .history-item .h-address { font-size: 11px; color: #475569; direction: ltr;
+            font-family: 'JetBrains Mono', monospace; }
+        .history-item .h-time { font-size: 11px; color: #475569; }
+        .history-item .h-status { font-size: 10px; padding: 3px 10px; border-radius: 20px;
+            font-weight: 600; }
+        .history-item .h-status.success { color: #4ade80; background: rgba(74,222,128,0.1); }
+        .history-item .h-status.failed { color: #f87171; background: rgba(248,113,113,0.1); }
+        .history-item .h-status.pending { color: #facc15; background: rgba(250,204,21,0.1); }
+        .history-item .h-link { color: #3b82f6; text-decoration: none; font-size: 11px; }
+        .history-item .h-link:hover { text-decoration: underline; }
+
+        .empty-state { text-align: center; padding: 40px 0; color: #64748b; }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+        .empty-state .title { font-size: 16px; font-weight: 600; color: #94a3b8; margin-bottom: 4px; }
+        .empty-state .sub { font-size: 13px; color: #475569; }
+
+        /* Toast */
+        .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: rgba(30,30,46,0.95); backdrop-filter: blur(8px); color: #f0f4f8;
+            padding: 12px 24px; border-radius: 40px; font-size: 14px; z-index: 999;
+            opacity: 0; transition: 0.4s; pointer-events: none; max-width: 90%; text-align: center;
+            border: 1px solid #2a2a3a; box-shadow: 0 8px 32px rgba(0,0,0,0.7); }
+        .toast.show { opacity: 1; pointer-events: auto; }
+        .toast.success { border-color: #16a34a; }
+        .toast.error { border-color: #dc2626; }
+        .toast.info { border-color: #3b82f6; }
+
+        .refresh-btn { background: transparent; border: 1px solid #2a2a3a; color: #93bbfc;
+            padding: 6px 14px; border-radius: 30px; font-size: 12px; cursor: pointer; }
+        .refresh-btn:hover { border-color: #3b82f6; background: #1a1a2a; }
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+
+        @media (max-width: 400px) {
+            .app-container { padding: 12px 8px 16px; }
+            .total-balance .amount { font-size: 24px; }
+            .overview-item .token-icon { width: 36px; height: 36px; }
+            .overview-item .token-icon img, .overview-item .token-icon .fallback { width: 26px; height: 26px; }
+            .network-select-display .net-icon { width: 24px; height: 24px; font-size: 12px; }
+            .history-item .h-icon { width: 32px; height: 32px; }
+            .history-item .h-icon img, .history-item .h-icon .fallback { width: 20px; height: 20px; }
+        }
+        .hidden { display: none !important; }
+        .spinner { display: inline-block; width: 20px; height: 20px;
+            border: 2px solid #1a1a2a; border-top: 2px solid #3b82f6;
+            border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    
+/* Corrected responsive receive address, full history addresses, and blue/green palette */
+:root { --blue:#2563eb; --blue-soft:#dbeafe; --green:#16a34a; --green-soft:#dcfce7; --white:#ffffff; --page:#eff6ff; --surface:#ffffff; --surface-2:#f8fbff; --line:#bfdbfe; --text:#12325b; --muted:#4b6b92; }
+body { background:var(--page); color:var(--text); }
+.app-container { background:var(--surface); box-shadow:0 20px 60px rgba(37,99,235,.14); }
+.header { position:relative; padding-top:42px; }
+.header-controls { position:absolute; top:0; left:0; display:flex; gap:8px; }
+.ui-toggle { min-width:44px; border:1px solid var(--line); border-radius:10px; background:var(--white); color:var(--blue); padding:7px 10px; font-size:12px; font-weight:700; cursor:pointer; }
+#loginSection .logo { font-size:44px; line-height:1.15; background:linear-gradient(135deg,var(--blue),var(--green)); -webkit-background-clip:text; }
+.receive-title { font-size:25px !important; line-height:1.35; color:var(--blue) !important; font-weight:800 !important; white-space:normal; overflow:visible; }
+.receive-address-box { position:relative; margin:14px 0 4px; padding:14px; border:1px solid var(--line); border-radius:14px; background:var(--surface-2); direction:ltr; text-align:left; }
+.receive-address-label { color:var(--muted); font-size:12px; font-weight:700; margin-bottom:7px; direction:rtl; text-align:right; }
+.receive-address-value { color:var(--blue); font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; line-height:1.8; white-space:normal; overflow-wrap:anywhere; word-break:break-all; }
+.receive-copy-btn { position:static !important; display:block; width:100%; margin:13px auto 0; transform:none; background:var(--blue) !important; color:#ffffff !important; border:1px solid var(--blue) !important; border-radius:10px; padding:9px 14px; font-weight:700; cursor:pointer; }
+.history-item .h-address { display:block; width:100%; max-width:100%; color:var(--blue); font-weight:700; background:var(--blue-soft); padding:7px 9px; border-radius:7px; direction:ltr; text-align:left; white-space:normal; overflow-wrap:anywhere; word-break:break-all; line-height:1.65; }
+.card,.total-balance,.tabs,.history-network-tabs,.history-item { background:var(--surface); border-color:var(--line); }
+.tx-data,.form-group input,.network-select-display,.token-select-display,.history-search input { background:var(--surface-2); border-color:var(--line); color:var(--text); }
+.overview-item { background:var(--surface-2); border-color:var(--line); }
+.overview-item .network-tag,.history-item .h-net-badge { background:var(--blue-soft); color:var(--blue) !important; }
+.history-item .h-amount.negative { color:var(--blue); }
+.history-item .h-amount.positive,.history-item .h-status.success,.gas-cost-usdt .label,.gas-cost-usdt .value { color:var(--green); }
+body.theme-dark { --page:#000000; --surface:#0b0b0b; --surface-2:#141414; --line:#2563eb; --text:#ffffff; --muted:#bfdbfe; }
+body.theme-dark .receive-address-box { background:#111111; }
+body.theme-dark .receive-address-value, body.theme-dark .history-item .h-address { color:#93c5fd; }
+body.theme-light { --page:#f3f4f6; --surface:#ffffff; --surface-2:#f9fafb; --line:#9ca3af; --text:#111827; --muted:#1f2937; }
+body.theme-light .card-title, body.theme-light .form-group label, body.theme-light .total-balance .label, body.theme-light .history-stats, body.theme-light .history-item .h-time, body.theme-light .history-item .h-usd { color:#111827 !important; }
+body.theme-light .form-group .input-hint, body.theme-light .network-select-display .net-label, body.theme-light .network-option .net-label, body.theme-light .history-item .h-net-badge { color:#374151 !important; }
+body.theme-light .history-item .h-address, body.theme-light .receive-address-value { color:#111827; }
+body.theme-light .history-item .h-address { background:#e5e7eb; border:1px solid #9ca3af; }
+body.theme-light .tx-data, body.theme-light .form-group input, body.theme-light .network-select-display, body.theme-light .token-select-display, body.theme-light .history-search input { color:#111827; border-color:#9ca3af; }
+body.theme-light .overview-item .symbol, body.theme-light .overview-item .balance { color:#111827 !important; }
+body.theme-light .overview-item .usd { color:#166534 !important; font-weight:700; }
+body.theme-light .overview-item .network-tag { color:#1e3a8a !important; background:#dbeafe; border:1px solid #93c5fd; }
+body.theme-light .overview-item .token-icon { background:#ffffff; border-color:#9ca3af; }
+body.theme-light .total-balance .amount { color:#111827 !important; }
+body.theme-light .total-balance .amount small { color:#374151 !important; }
+.history-item .h-footer { display:block; }
+.history-item .h-footer > div { margin-top:8px; display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px; }
+html[dir="ltr"] .header-controls { left:auto; right:0; }
+html[dir="ltr"] .receive-title { text-align:left; }
+@media (max-width:400px){ #loginSection .logo{font-size:36px;} .receive-title{font-size:21px !important;} }
+
+</style>
+</head>
+<body>
+    <div class="app-container">
+        <div id="toast" class="toast"></div>
+
+        <!-- LOGIN / MULTI-WALLET HOME -->
+        <div id="loginSection">
+            <div class="logo" data-i18n="wallet">Wallet</div>
+            <div class="sub">اختر محفظة موجودة أو أضف محفظة جديدة</div>
+            <div id="profileList" style="width:100%;display:flex;flex-direction:column;gap:8px;"></div>
+            <button class="btn-secondary" id="newWalletBtn">＋ إضافة محفظة جديدة</button>
+            <div id="loginForm" style="width:100%;display:none;flex-direction:column;gap:10px;">
+                <div class="flex-row" id="loginModes">
+                    <button class="btn-secondary" id="publicModeBtn">الدخول بالعنوان العام</button>
+                    <button class="btn-secondary" id="hotModeBtn">الدخول بالمفتاح الخاص</button>
+                </div>
+                <input type="text" id="loginWalletName" placeholder="اسم المحفظة" autocomplete="off">
+                <input type="text" id="loginAddress" placeholder="العنوان العام 0x..." dir="ltr" autocomplete="off">
+                <input type="password" id="loginPrivateKey" placeholder="المفتاح الخاص 0x..." dir="ltr" autocomplete="off">
+                <input type="password" id="loginPassword" placeholder="كلمة سر الدخول" dir="ltr" autocomplete="current-password">
+                <input type="password" id="loginPasswordConfirm" placeholder="تأكيد كلمة سر الدخول" dir="ltr" autocomplete="new-password">
+                <input type="password" id="paymentPassword" placeholder="كلمة سر الدفع" dir="ltr" autocomplete="new-password">
+                <input type="password" id="paymentPasswordConfirm" placeholder="تأكيد كلمة سر الدفع" dir="ltr" autocomplete="new-password">
+                <div id="authModeNote" class="login-note"></div>
+                <button class="btn-primary" id="loginBtn">فتح المحفظة</button>
+                <button class="btn-secondary" id="cancelNewWalletBtn">إلغاء</button>
+            </div>
+            <div class="login-note">المفتاح الخاص يُحفظ مشفرًا محليًا فقط في مسار المحفظة الساخنة</div>
+        </div>
+
+        <!-- WALLET -->
+        <div id="walletSection">
+            <div class="header">
+                <div class="header-controls"><button class="ui-toggle" id="themeToggle" type="button">☼</button><button class="ui-toggle" id="languageToggle" type="button">EN</button></div>
+                <div class="address-badge">
+                    <span id="shortAddress">0x...</span>
+                    <button class="copy-btn" id="copyAddressBtn" title="نسخ">📋</button>
+                </div>
+                <button class="logout-btn" id="logoutBtn" data-i18n="logout">خروج</button>
+            </div>
+
+            <div class="total-balance">
+                <div class="label" data-i18n="totalValue">القيمة الإجمالية</div>
+                <div class="amount" id="totalBalanceDisplay">$0.00</div>
+            </div>
+
+            <div class="tabs">
+                <button class="active" data-tab="tabOverview" data-i18n="overview">نظرة عامة</button>
+                <button data-tab="tabReceive" data-i18n="receive">استقبال</button>
+                <button data-tab="tabSend" data-i18n="send">إرسال</button>
+                <button data-tab="tabHistory" data-i18n="history">السجل</button>
+            </div>
+
+            <!-- Overview -->
+            <div class="tab-content active" id="tabOverview">
+                <div id="overviewContainer">
+                    <div style="color:#64748b;text-align:center;padding:24px 0;">جاري تحميل الأرصدة...</div>
+                </div>
+            </div>
+
+            <!-- Receive -->
+            <div class="tab-content" id="tabReceive">
+                <div class="card">
+                    <div class="card-title">📥 عنوان الاستقبال</div>
+                    <div class="qr-container">
+                        <div id="receiveQr"></div>
+                    </div>
+                    <div class="receive-address-box">
+                        <div class="receive-address-label" data-i18n="receiveAddressLabel">عنوان المحفظة</div>
+                        <div class="receive-address-value" id="receiveAddressText">0x...</div>
+                        <button class="copy-btn receive-copy-btn" id="copyReceiveBtn" data-i18n="copy">نسخ</button>
+                    </div>
+                    <div style="color:#64748b;text-align:center;font-size:12px;">امسح الكود لاستقبال العملات والرموز</div>
+                </div>
+            </div>
+
+            <!-- Send -->
+            <div class="tab-content" id="tabSend">
+                <div class="card">
+                    <div class="card-title">🚀 إرسال مباشر ساخن</div>
+
+                    <!-- Network Select with Icons -->
+                    <div class="form-group">
+                        <label>الشبكة</label>
+                        <div class="network-select-wrapper">
+                            <div class="network-select-display" id="networkSelectDisplay">
+                                <div class="net-icon" id="networkSelectIcon" style="background:#3b82f6;">E</div>
+                                <div class="net-info">
+                                    <div class="net-name" id="networkSelectName">Ethereum</div>
+                                    <div class="net-label" id="networkSelectLabel">ERC20</div>
+                                </div>
+                                <div class="arrow">▼</div>
+                            </div>
+                            <div class="network-dropdown" id="networkDropdown"></div>
+                        </div>
+                        <select id="sendNetwork" class="hidden-select">
+                            <option value="ethereum" selected>Ethereum</option>
+                            <option value="arbitrum">Arbitrum One</option>
+                            <option value="avalanche">Avalanche</option>
+                            <option value="base">Base</option>
+                            <option value="bsc">BSC</option>
+                            <option value="blast">Blast</option>
+                            <option value="celo">Celo</option>
+                            <option value="hemi">Hemi</option>
+                            <option value="hyperevm">HyperEVM</option>
+                            <option value="linea">Linea</option>
+                            <option value="mantle">Mantle</option>
+                            <option value="megaeth">MegaETH</option>
+                            <option value="monad">Monad</option>
+                            <option value="opbnb">opBNB</option>
+                            <option value="optimism">Optimism</option>
+                            <option value="palm">Palm</option>
+                            <option value="polygon">Polygon</option>
+                            <option value="scroll">Scroll</option>
+                            <option value="sei">Sei</option>
+                            <option value="starknet">Starknet</option>
+                            <option value="unichain">Unichain</option>
+                            <option value="zksync">ZKsync Era</option>
+                        </select>
+                    </div>
+
+                    <!-- Token Select with Icons -->
+                    <div class="form-group">
+                        <label>العملة / الرمز</label>
+                        <div class="token-select-wrapper">
+                            <div class="token-select-display" id="tokenSelectDisplay">
+                                <img src="" class="tok-icon" id="tokenSelectImg" style="display:none;">
+                                <div class="tok-fallback" id="tokenSelectFallback" style="background:#627EEA;">E</div>
+                                <span id="tokenSelectName">ETH</span>
+                                <div class="arrow">▼</div>
+                            </div>
+                            <div class="token-dropdown" id="tokenDropdown"></div>
+                        </div>
+                        <select id="sendToken" class="hidden-select"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>الكمية</label>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="number" id="sendAmount" placeholder="0.0" step="any" min="0" style="flex:1;">
+                            <button class="max-btn" id="maxAmountBtn">الحد الأقصى</button>
+                        </div>
+                        <div class="input-hint" id="balanceHint">الرصيد المتاح: 0.00</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>عنوان المستقبل</label>
+                        <input type="text" id="sendTo" placeholder="0x..." dir="ltr">
+                        <button class="scan-toggle" id="scanRecipientBtn">📷 مسح QR</button>
+                        <div id="recipientScannerContainer" class="scanner-container hidden">
+                            <div id="recipientScanner"></div>
+                        </div>
+                    </div>
+
+                    <div class="card" id="preSendEstimate" style="background:rgba(20,35,30,0.75);border-color:rgba(74,222,128,0.35);margin-top:4px;">
+                        <div class="card-title" style="color:#4ade80;">⛽ تقدير تكلفة الإرسال قبل التأكيد</div>
+                        <div class="tx-details">
+                            <div><span>سعر الغاز:</span> <span class="val" id="preGasPrice">--</span></div>
+                            <div><span>حد الغاز التقديري:</span> <span class="val" id="preGasLimit">--</span></div>
+                            <div><span>تكلفة الغاز:</span> <span class="val" id="preGasNative">--</span></div>
+                        </div>
+                        <div class="gas-cost-usdt">
+                            <div class="label">💰 التكلفة التقديرية بالدولار</div>
+                            <div class="value" id="preGasUsdt">--</div>
+                        </div>
+                        <div id="preGasStatus" style="font-size:12px;color:#94a3b8;margin-top:8px;text-align:center;">أدخل العنوان والكمية لبدء التقدير</div>
+                    </div>
+                    <button class="btn-success" id="createUnsignedBtn">إرسال مباشر</button>
+                </div>
+
+                <div class="card" id="unsignedOutput" style="display:none;">
+                    <div class="card-title">📄 المعاملة غير الموقعة</div>
+                    <div class="tx-data" id="unsignedTxData">
+                        <span id="unsignedTxText">...</span>
+                        <button class="copy-btn" id="copyUnsignedBtn">نسخ</button>
+                    </div>
+                    <div class="qr-container">
+                        <div id="unsignedQr"></div>
+                    </div>
+                    <div style="color:#64748b;text-align:center;font-size:12px;">انسخ أو امسح الكود لتوقيع المعاملة</div>
+                    <div class="tx-details" style="margin-top:12px;">
+                        <div><span>من:</span> <span class="val" id="txFrom">-</span></div>
+                        <div><span>إلى:</span> <span class="val" id="txTo">-</span></div>
+                        <div><span>القيمة:</span> <span class="val" id="txValue">-</span></div>
+                        <div><span>الغاز:</span> <span class="val" id="txGas">-</span></div>
+                        <div><span>سعر الغاز:</span> <span class="val" id="txGasPrice">-</span></div>
+                        <div><span>Nonce:</span> <span class="val" id="txNonce">-</span></div>
+                    </div>
+                    <div class="gas-cost-usdt">
+                        <div class="label">💰 تكلفة المعاملة (USDT)</div>
+                        <div class="value" id="txCostUsdt">$0.00</div>
+                    </div>
+                </div>
+
+                <div class="card" id="signedInput" style="display:none;">
+                    <div class="card-title">🔐 إدخال المعاملة الموقعة</div>
+                    <div class="form-group">
+                        <input type="text" id="signedTxInput" placeholder="0x..." dir="ltr">
+                        <button class="scan-toggle" id="scanSignedBtn">📷 مسح QR</button>
+                        <div id="signedScannerContainer" class="scanner-container hidden">
+                            <div id="signedScanner"></div>
+                        </div>
+                    </div>
+                    <button class="btn-success" id="broadcastBtn">بث المعاملة</button>
+                    <div id="countdownContainer" class="countdown-box mt-8 hidden">
+                        <div style="font-size:13px;color:#94a3b8;">⏳ جاري البث خلال</div>
+                        <div class="timer" id="countdownTimer">10</div>
+                        <div style="font-size:13px;color:#94a3b8;">ثانية</div>
+                        <button class="btn-danger mt-8" id="cancelBroadcastBtn">إلغاء البث</button>
+                    </div>
+                    <div id="broadcastResult" class="mt-8 hidden">
+                        <div class="card" style="border-color:#16a34a;">
+                            <div class="card-title">✅ تم البث بنجاح</div>
+                            <div class="tx-data">
+                                <span id="txHashDisplay">...</span>
+                                <button class="copy-btn" id="copyHashBtn">نسخ</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History -->
+            <div class="tab-content" id="tabHistory">
+                <div class="card">
+                    <div class="history-header">
+                        <div class="card-title" style="margin-bottom:0;">📜 <span data-i18n="historyTitle">سجل المعاملات</span></div>
+                        <button class="refresh-btn" id="refreshHistoryBtn" data-i18n="refresh">🔄 تحديث</button>
+                    </div>
+
+                    <!-- Network Tabs Filter -->
+                    <div class="history-controls">
+                        <div class="history-network-tabs" id="historyNetworkTabs">
+                            <button class="net-tab active" data-net="all" data-i18n="all">الكل</button>
+                            <button class="net-tab" data-net="ethereum"><span class="net-dot" style="background:#3b82f6;"></span>ETH</button>
+                            <button class="net-tab" data-net="arbitrum"><span class="net-dot" style="background:#28a0f0;"></span>ARB</button>
+                            <button class="net-tab" data-net="avalanche"><span class="net-dot" style="background:#ef4444;"></span>AVAX</button>
+                            <button class="net-tab" data-net="base"><span class="net-dot" style="background:#67e8f9;"></span>Base</button>
+                            <button class="net-tab" data-net="bsc"><span class="net-dot" style="background:#facc15;"></span>BSC</button>
+                            <button class="net-tab" data-net="blast"><span class="net-dot" style="background:#fcfc03;"></span>Blast</button>
+                            <button class="net-tab" data-net="celo"><span class="net-dot" style="background:#fcff52;"></span>Celo</button>
+                            <button class="net-tab" data-net="hemi"><span class="net-dot" style="background:#ff6b35;"></span>Hemi</button>
+                            <button class="net-tab" data-net="hyperevm"><span class="net-dot" style="background:#00d4ff;"></span>Hype</button>
+                            <button class="net-tab" data-net="linea"><span class="net-dot" style="background:#61dfff;"></span>Linea</button>
+                            <button class="net-tab" data-net="mantle"><span class="net-dot" style="background:#000000;"></span>MNT</button>
+                            <button class="net-tab" data-net="megaeth"><span class="net-dot" style="background:#7c3aed;"></span>Mega</button>
+                            <button class="net-tab" data-net="monad"><span class="net-dot" style="background:#836ef9;"></span>Monad</button>
+                            <button class="net-tab" data-net="opbnb"><span class="net-dot" style="background:#facc15;"></span>opBNB</button>
+                            <button class="net-tab" data-net="optimism"><span class="net-dot" style="background:#ff0420;"></span>OP</button>
+                            <button class="net-tab" data-net="palm"><span class="net-dot" style="background:#f2c94c;"></span>Palm</button>
+                            <button class="net-tab" data-net="polygon"><span class="net-dot" style="background:#a855f7;"></span>POL</button>
+                            <button class="net-tab" data-net="scroll"><span class="net-dot" style="background:#e5d70a;"></span>Scroll</button>
+                            <button class="net-tab" data-net="sei"><span class="net-dot" style="background:#9c88ff;"></span>Sei</button>
+                            <button class="net-tab" data-net="starknet"><span class="net-dot" style="background:#0c0c4f;"></span>STRK</button>
+                            <button class="net-tab" data-net="unichain"><span class="net-dot" style="background:#ff007a;"></span>UNI</button>
+                            <button class="net-tab" data-net="zksync"><span class="net-dot" style="background:#8c8dfc;"></span>zkSync</button>
+                        </div>
+                        <div class="history-search">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="historySearch" placeholder="ابحث بالعنوان أو الهاش..." dir="ltr">
+                        </div>
+                        <div class="history-stats">
+                            <span id="historyCount">0 معاملة</span>
+                            <span id="historyNetworkLabel">جميع الشبكات</span>
+                        </div>
+                    </div>
+
+                    <div id="historyContainer">
+                        <div class="empty-state">
+                            <div class="icon">📭</div>
+                            <div class="title">لا توجد معاملات</div>
+                            <div class="sub">سيتم جلب السجل من Etherscan API</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        // ============================================================
+        //  CONFIG
+        // ============================================================
+        const INFURA_KEY = '157ea3f5b13b467398cad94a2510a9dd';
+        const ETHERSCAN_API_KEY = 'F7B26KHK3HZM3IGDU3Z1ATF3AA9H299MVR';
+
+        const TOKEN_ICONS = {
+            'ETH': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+            'BNB': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/binance/info/logo.png',
+            'POL': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
+            'AVAX': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png',
+            'USDT': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
+            'USDC': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+            'CELO': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/celo/info/logo.png',
+            'MNT': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/mantle/info/logo.png',
+            'SEI': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/sei/info/logo.png',
+            'STRK': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/starknet/info/logo.png',
+            'UNI': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984/logo.png',
+            'MONAD': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/monad/info/logo.png',
+            'PALM': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/palm/info/logo.png',
+        };
+        const TOKEN_COLORS = {
+            'ETH': '#627EEA', 'BNB': '#F3BA2F', 'POL': '#8247E5',
+            'AVAX': '#E84142', 'USDT': '#26A17B', 'USDC': '#2775CA',
+            'CELO': '#FCFF52', 'MNT': '#000000', 'SEI': '#9C88FF',
+            'STRK': '#0C0C4F', 'UNI': '#FF007A', 'MONAD': '#836EF9',
+            'PALM': '#F2C94C'
+        };
+
+        const NETWORKS = {
+            ethereum: { name: 'Ethereum', chainId: 1, color: '#3b82f6',
+                rpc: `https://mainnet.infura.io/v3/${INFURA_KEY}`, native: 'ETH', label: 'ERC20', coingeckoId: 'ethereum' },
+            arbitrum: { name: 'Arbitrum One', chainId: 42161, color: '#28a0f0',
+                rpc: `https://arbitrum-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'ETH', label: 'Arbitrum', coingeckoId: 'ethereum' },
+            avalanche: { name: 'Avalanche', chainId: 43114, color: '#ef4444',
+                rpc: `https://avalanche-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'AVAX', label: 'C-Chain', coingeckoId: 'avalanche-2' },
+            base: { name: 'Base', chainId: 8453, color: '#67e8f9',
+                rpc: `https://base-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'ETH', label: 'BASE', coingeckoId: 'ethereum' },
+            bsc: { name: 'BSC', chainId: 56, color: '#facc15',
+                rpc: `https://bsc-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'BNB', label: 'BEP20', coingeckoId: 'binancecoin' },
+            blast: { name: 'Blast', chainId: 81457, color: '#fcfc03',
+                rpc: `https://blast-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'ETH', label: 'Blast', coingeckoId: 'ethereum' },
+            celo: { name: 'Celo', chainId: 42220, color: '#fcff52',
+                rpc: `https://celo-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'CELO', label: 'Celo', coingeckoId: 'celo' },
+            hemi: { name: 'Hemi', chainId: 43111, color: '#ff6b35',
+                rpc: `https://hemi-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'ETH', label: 'Hemi', coingeckoId: 'ethereum' },
+            hyperevm: { name: 'HyperEVM', chainId: 999, color: '#00d4ff',
+                rpc: `https://hyper-evm-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'ETH', label: 'HyperEVM', coingeckoId: 'ethereum' },
+            linea: { name: 'Linea', chainId: 59144, color: '#61dfff',
+                rpc: `https://linea-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'ETH', label: 'Linea', coingeckoId: 'ethereum' },
+            mantle: { name: 'Mantle', chainId: 5000, color: '#000000',
+                rpc: `https://mantle-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'MNT', label: 'Mantle', coingeckoId: 'mantle' },
+            megaeth: { name: 'MegaETH', chainId: 6342, color: '#7c3aed',
+                rpc: `https://megaeth-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'ETH', label: 'MegaETH', coingeckoId: 'ethereum' },
+            monad: { name: 'Monad', chainId: 10143, color: '#836ef9',
+                rpc: `https://monad-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'MONAD', label: 'Monad', coingeckoId: 'monad' },
+            opbnb: { name: 'opBNB', chainId: 204, color: '#facc15',
+                rpc: `https://opbnb-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'BNB', label: 'opBNB', coingeckoId: 'binancecoin' },
+            optimism: { name: 'Optimism', chainId: 10, color: '#ff0420',
+                rpc: `https://optimism-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'ETH', label: 'Optimism', coingeckoId: 'ethereum' },
+            palm: { name: 'Palm', chainId: 11297108109, color: '#f2c94c',
+                rpc: `https://palm-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'PALM', label: 'Palm', coingeckoId: 'palm' },
+            polygon: { name: 'Polygon', chainId: 137, color: '#a855f7',
+                rpc: `https://polygon-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'POL', label: 'POS', coingeckoId: 'matic-network' },
+            scroll: { name: 'Scroll', chainId: 534352, color: '#e5d70a',
+                rpc: `https://scroll-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'ETH', label: 'Scroll', coingeckoId: 'ethereum' },
+            sei: { name: 'Sei', chainId: 1329, color: '#9c88ff',
+                rpc: `https://sei-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'SEI', label: 'Sei', coingeckoId: 'sei-network' },
+            starknet: { name: 'Starknet', chainId: 23448594291968334, color: '#0c0c4f',
+                rpc: `https://starknet-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'STRK', label: 'Starknet', coingeckoId: 'starknet' },
+            unichain: { name: 'Unichain', chainId: 130, color: '#ff007a',
+                rpc: `https://unichain-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'UNI', label: 'Unichain', coingeckoId: 'uniswap' },
+            zksync: { name: 'ZKsync Era', chainId: 324, color: '#8c8dfc',
+                rpc: `https://zksync-mainnet.infura.io/v3/${INFURA_KEY}`, native: 'ETH', label: 'ZKsync', coingeckoId: 'ethereum' }
+        };
+
+        const TOKENS = {
+            ethereum: {
+                ETH: { address: 'native', decimals: 18, symbol: 'ETH', coingeckoId: 'ethereum' },
+                USDT: { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            arbitrum: {
+                ETH: { address: 'native', decimals: 18, symbol: 'ETH', coingeckoId: 'ethereum' },
+                USDT: { address: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            avalanche: {
+                AVAX: { address: 'native', decimals: 18, symbol: 'AVAX', coingeckoId: 'avalanche-2' },
+                USDT: { address: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            base: {
+                ETH: { address: 'native', decimals: 18, symbol: 'ETH', coingeckoId: 'ethereum' },
+                USDT: { address: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            bsc: {
+                BNB: { address: 'native', decimals: 18, symbol: 'BNB', coingeckoId: 'binancecoin' },
+                USDT: { address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 18, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            blast: {
+                ETH: { address: 'native', decimals: 18, symbol: 'ETH', coingeckoId: 'ethereum' },
+                USDT: { address: '0x4300000000000000000000000000000000000003', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x4300000000000000000000000000000000000004', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            celo: {
+                CELO: { address: 'native', decimals: 18, symbol: 'CELO', coingeckoId: 'celo' },
+                USDT: { address: '0x617f3112bf5397D0467D231cc3F5202f35b5Ac7b', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            hemi: {
+                ETH: { address: 'native', decimals: 18, symbol: 'ETH', coingeckoId: 'ethereum' },
+                USDT: { address: '0x3Adf21A6cbc9ce6D13a459ece5d4353B0B253921', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0xad11a8BBe10bC2de6F0EeA5Ee2D1170117e5dEe8', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            hyperevm: {
+                ETH: { address: 'native', decimals: 18, symbol: 'ETH', coingeckoId: 'ethereum' },
+                USDT: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            linea: {
+                ETH: { address: 'native', decimals: 18, symbol: 'ETH', coingeckoId: 'ethereum' },
+                USDT: { address: '0xA219439258ca9da29E9Cc4cE5596924745e12B93', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x176211869cA2b568f2A7D4EE941E273a9C155Aec', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            mantle: {
+                MNT: { address: 'native', decimals: 18, symbol: 'MNT', coingeckoId: 'mantle' },
+                USDT: { address: '0x201EBa5CC46D216Ce6DC03F6a759e8E766e956aE', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            megaeth: {
+                ETH: { address: 'native', decimals: 18, symbol: 'ETH', coingeckoId: 'ethereum' },
+                USDT: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            monad: {
+                MONAD: { address: 'native', decimals: 18, symbol: 'MONAD', coingeckoId: 'monad' },
+                USDT: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            opbnb: {
+                BNB: { address: 'native', decimals: 18, symbol: 'BNB', coingeckoId: 'binancecoin' },
+                USDT: { address: '0x9e5AAC1Ba1a2e6aEd6b32689DFcF62A509Ca96f3', decimals: 18, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x2cD6dF8bE1F4F6C8e3A8f9d7c5B3A4e6F8D9C0B', decimals: 18, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            optimism: {
+                ETH: { address: 'native', decimals: 18, symbol: 'ETH', coingeckoId: 'ethereum' },
+                USDT: { address: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            palm: {
+                PALM: { address: 'native', decimals: 18, symbol: 'PALM', coingeckoId: 'palm' },
+                USDT: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            polygon: {
+                POL: { address: 'native', decimals: 18, symbol: 'POL', coingeckoId: 'matic-network' },
+                USDT: { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            scroll: {
+                ETH: { address: 'native', decimals: 18, symbol: 'ETH', coingeckoId: 'ethereum' },
+                USDT: { address: '0xf55BEC9cafDbE8730f096Aa55dadbe5065Be39fD', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x06eFdBFf2a14a7c8E15944D1F4A48F9F95F663A4', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            sei: {
+                SEI: { address: 'native', decimals: 18, symbol: 'SEI', coingeckoId: 'sei-network' },
+                USDT: { address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            starknet: {
+                STRK: { address: 'native', decimals: 18, symbol: 'STRK', coingeckoId: 'starknet' },
+                USDT: { address: '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858cbbac6df1c', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            unichain: {
+                UNI: { address: 'native', decimals: 18, symbol: 'UNI', coingeckoId: 'uniswap' },
+                USDT: { address: '0xf55BEC9cafDbE8730f096Aa55dadbe5065Be39fD', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x078D782b760474a361dDAE0707502cfa4bC62822', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            },
+            zksync: {
+                ETH: { address: 'native', decimals: 18, symbol: 'ETH', coingeckoId: 'ethereum' },
+                USDT: { address: '0x493257fD37EDB34451f62EDf8D2a0C418852bA4C', decimals: 6, symbol: 'USDT', coingeckoId: 'tether' },
+                USDC: { address: '0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4', decimals: 6, symbol: 'USDC', coingeckoId: 'usd-coin' }
+            }
+        };
+
+        // ============================================================
+        //  STATE
+        // ============================================================
+        let walletAddress = '';
+        let currentAccessMode = 'hot';
+        let activeProfileId = '';
+        let walletProfiles = [];
+        let activeWallet = null;
+        let walletName = '';
+        let balances = {};
+        let currentUnsignedTx = null;
+        let currentSignedTx = null;
+        let broadcastTimer = null;
+        let broadcastCountdown = 10;
+        let isBroadcasting = false;
+        let providers = {};
+        let tokenContracts = {};
+        let txHistoryRaw = [];
+        let activeHistoryNetwork = 'all';
+        let historySearchQuery = '';
+        let recipientScannerInstance = null;
+        let signedScannerInstance = null;
+        let priceCache = {};
+        let priceCacheTime = 0;
+        let isHistoryLoading = false;
+        let selectedToken = '';
+
+        // ============================================================
+        //  DOM REFS
+        // ============================================================
+        const $ = id => document.getElementById(id);
+        const loginSection = $('loginSection');
+        const walletSection = $('walletSection');
+        const loginAddress = $('loginAddress');
+        const profileList = $('profileList');
+        const loginForm = $('loginForm');
+        const newWalletBtn = $('newWalletBtn');
+        const cancelNewWalletBtn = $('cancelNewWalletBtn');
+        const publicModeBtn = $('publicModeBtn');
+        const hotModeBtn = $('hotModeBtn');
+        const loginPrivateKey = $('loginPrivateKey');
+        const loginPassword = $('loginPassword');
+        const loginPasswordConfirm = $('loginPasswordConfirm');
+        const paymentPassword = $('paymentPassword');
+        const paymentPasswordConfirm = $('paymentPasswordConfirm');
+        const authModeNote = $('authModeNote');
+        const loginWalletName = $('loginWalletName');
+        const loginBtn = $('loginBtn');
+        const logoutBtn = $('logoutBtn');
+        const shortAddress = $('shortAddress');
+        const copyAddressBtn = $('copyAddressBtn');
+        const overviewContainer = $('overviewContainer');
+        const totalBalanceDisplay = $('totalBalanceDisplay');
+        const receiveAddressText = $('receiveAddressText');
+        const receiveQr = $('receiveQr');
+        const copyReceiveBtn = $('copyReceiveBtn');
+        const sendNetwork = $('sendNetwork');
+        const sendToken = $('sendToken');
+        const networkSelectDisplay = $('networkSelectDisplay');
+        const networkSelectIcon = $('networkSelectIcon');
+        const networkSelectName = $('networkSelectName');
+        const networkSelectLabel = $('networkSelectLabel');
+        const networkDropdown = $('networkDropdown');
+        const tokenSelectDisplay = $('tokenSelectDisplay');
+        const tokenSelectImg = $('tokenSelectImg');
+        const tokenSelectFallback = $('tokenSelectFallback');
+        const tokenSelectName = $('tokenSelectName');
+        const tokenDropdown = $('tokenDropdown');
+        const sendAmount = $('sendAmount');
+        const maxAmountBtn = $('maxAmountBtn');
+        const balanceHint = $('balanceHint');
+        const sendTo = $('sendTo');
+        const scanRecipientBtn = $('scanRecipientBtn');
+        const recipientScannerContainer = $('recipientScannerContainer');
+        const recipientScanner = $('recipientScanner');
+        const createUnsignedBtn = $('createUnsignedBtn');
+        const preGasPrice = $('preGasPrice');
+        const preGasLimit = $('preGasLimit');
+        const preGasNative = $('preGasNative');
+        const preGasUsdt = $('preGasUsdt');
+        const preGasStatus = $('preGasStatus');
+        const unsignedOutput = $('unsignedOutput');
+        const unsignedTxText = $('unsignedTxText');
+        const copyUnsignedBtn = $('copyUnsignedBtn');
+        const unsignedQr = $('unsignedQr');
+        const txFrom = $('txFrom');
+        const txTo = $('txTo');
+        const txValue = $('txValue');
+        const txGas = $('txGas');
+        const txGasPrice = $('txGasPrice');
+        const txNonce = $('txNonce');
+        const txCostUsdt = $('txCostUsdt');
+        const signedInput = $('signedInput');
+        const signedTxInput = $('signedTxInput');
+        const scanSignedBtn = $('scanSignedBtn');
+        const signedScannerContainer = $('signedScannerContainer');
+        const signedScanner = $('signedScanner');
+        const broadcastBtn = $('broadcastBtn');
+        const countdownContainer = $('countdownContainer');
+        const countdownTimer = $('countdownTimer');
+        const cancelBroadcastBtn = $('cancelBroadcastBtn');
+        const broadcastResult = $('broadcastResult');
+        const txHashDisplay = $('txHashDisplay');
+        const copyHashBtn = $('copyHashBtn');
+        const historyContainer = $('historyContainer');
+        const refreshHistoryBtn = $('refreshHistoryBtn');
+        const historyNetworkTabs = $('historyNetworkTabs');
+        const historySearch = $('historySearch');
+        const historyCount = $('historyCount');
+        const historyNetworkLabel = $('historyNetworkLabel');
+        const toast = $('toast');
+
+        // ============================================================
+        //  TOAST
+        // ============================================================
+        let toastTimeout;
+        function showToast(msg, type = 'info') {
+            clearTimeout(toastTimeout);
+            toast.textContent = msg;
+            toast.className = 'toast ' + type + ' show';
+            toastTimeout = setTimeout(() => { toast.className = 'toast'; }, 4000);
+        }
+
+        // ============================================================
+        //  HELPERS
+        // ============================================================
+        function getTokenIconHTML(symbol, size = 32) {
+            const iconUrl = TOKEN_ICONS[symbol];
+            const color = TOKEN_COLORS[symbol] || '#3b82f6';
+            if (iconUrl) {
+                return `<img src="${iconUrl}" alt="${symbol}" loading="lazy" 
+                    onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'fallback\' style=\'width:${size}px;height:${size}px;background:${color}\'>${symbol.charAt(0)}</div>';"
+                    style="width:${size}px;height:${size}px;">`;
+            }
+            return `<div class="fallback" style="width:${size}px;height:${size}px;background:${color}">${symbol.charAt(0)}</div>`;
+        }
+        function getTokenIconUrl(symbol) { return TOKEN_ICONS[symbol] || null; }
+        function getTokenColor(symbol) { return TOKEN_COLORS[symbol] || '#3b82f6'; }
+
+        // ============================================================
+        //  PRICE FETCHER
+        // ============================================================
+        async function fetchPrices() {
+            const now = Date.now();
+            if (priceCacheTime && (now - priceCacheTime) < 120000) return priceCache;
+            try {
+                const ids = ['ethereum','binancecoin','matic-network','avalanche-2','tether','usd-coin','celo','mantle','sei-network','starknet','uniswap','monad','palm'];
+                const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd`;
+                const res = await fetch(url);
+                const data = await res.json();
+                priceCache = data;
+                priceCacheTime = now;
+                return data;
+            } catch (e) { return priceCache || {}; }
+        }
+        async function getPrice(coingeckoId) {
+            const prices = await fetchPrices();
+            return prices[coingeckoId]?.usd || 0;
+        }
+
+        // ============================================================
+        //  PROVIDERS
+        // ============================================================
+        function getProvider(networkKey) {
+            if (!providers[networkKey]) {
+                providers[networkKey] = new ethers.providers.JsonRpcProvider(NETWORKS[networkKey].rpc);
+            }
+            return providers[networkKey];
+        }
+        function getTokenContract(networkKey, tokenKey) {
+            const key = networkKey + '_' + tokenKey;
+            if (!tokenContracts[key]) {
+                const token = TOKENS[networkKey][tokenKey];
+                if (token.address === 'native') return null;
+                const provider = getProvider(networkKey);
+                const abi = [
+                    'function balanceOf(address) view returns (uint256)',
+                    'function decimals() view returns (uint8)',
+                    'function symbol() view returns (string)',
+                    'function transfer(address to, uint256 amount) returns (bool)',
+                    'event Transfer(address indexed from, address indexed to, uint256 value)'
+                ];
+                tokenContracts[key] = new ethers.Contract(token.address, abi, provider);
+            }
+            return tokenContracts[key];
+        }
+
+        // ============================================================
+        //  FETCH BALANCES
+        // ============================================================
+        async function fetchAllBalances(address) {
+            balances = {};
+            const results = {};
+            for (const [netKey, net] of Object.entries(NETWORKS)) {
+                results[netKey] = {};
+                try {
+                    const provider = getProvider(netKey);
+                    const nativeBal = await provider.getBalance(address);
+                    results[netKey]['native'] = ethers.utils.formatEther(nativeBal);
+                    const tokens = TOKENS[netKey];
+                    for (const [tokKey, tok] of Object.entries(tokens)) {
+                        if (tok.address === 'native') {
+                            results[netKey][tokKey] = ethers.utils.formatEther(nativeBal);
+                            continue;
+                        }
+                        try {
+                            const contract = getTokenContract(netKey, tokKey);
+                            if (contract) {
+                                const bal = await contract.balanceOf(address);
+                                results[netKey][tokKey] = ethers.utils.formatUnits(bal, tok.decimals);
+                            }
+                        } catch (e) { results[netKey][tokKey] = '0.00'; }
+                    }
+                } catch (e) {
+                    results[netKey]['native'] = '0.00';
+                    for (const tokKey of Object.keys(TOKENS[netKey])) {
+                        if (!results[netKey][tokKey]) results[netKey][tokKey] = '0.00';
+                    }
+                }
+            }
+            balances = results;
+            return results;
+        }
+
+        // ============================================================
+        //  RENDER OVERVIEW
+        // ============================================================
+        async function renderOverview(balData) {
+            let html = '';
+            let totalUsd = 0;
+            const items = [];
+            for (const [netKey, net] of Object.entries(NETWORKS)) {
+                const tokens = TOKENS[netKey];
+                const bals = balData[netKey] || {};
+                for (const [tokKey, tok] of Object.entries(tokens)) {
+                    const balStr = bals[tokKey] || '0.00';
+                    const balNum = parseFloat(balStr);
+                    if (balNum < 0.000001) continue;
+                    const price = await getPrice(tok.coingeckoId);
+                    const usdValue = balNum * price;
+                    totalUsd += usdValue;
+                    items.push({ netKey, netName: net.name, color: net.color,
+                        symbol: tok.symbol, balance: balNum, usd: usdValue, tokKey, price });
+                }
+            }
+            items.sort((a, b) => b.usd - a.usd);
+            if (items.length === 0) {
+                html = `<div style="color:#64748b;text-align:center;padding:24px 0;">لا توجد أرصدة</div>`;
+            } else {
+                for (const item of items) {
+                    const usdDisplay = item.usd > 0 ? `$${item.usd.toFixed(2)}` : '$0.00';
+                    const iconHTML = getTokenIconHTML(item.symbol, 32);
+                    html += `
+                        <div class="overview-item clickable" data-net="${item.netKey}" data-tok="${item.tokKey}">
+                            <div class="left">
+                                <div class="token-icon">${iconHTML}</div>
+                                <div class="token-info">
+                                    <span class="symbol">${item.symbol}</span>
+                                    <span class="network-tag" style="color:${item.color}">${item.netName}</span>
+                                </div>
+                            </div>
+                            <div class="right">
+                                <div class="balance">${item.balance.toFixed(4)}</div>
+                                <div class="usd">${usdDisplay}</div>
+                            </div>
+                        </div>`;
+                }
+            }
+            overviewContainer.innerHTML = html;
+            totalBalanceDisplay.textContent = `$${totalUsd.toFixed(2)}`;
+            document.querySelectorAll('.overview-item').forEach(el => {
+                el.addEventListener('click', function() {
+                    const net = this.dataset.net;
+                    const tok = this.dataset.tok;
+                    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+                    document.querySelector('[data-tab="tabSend"]').classList.add('active');
+                    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                    document.getElementById('tabSend').classList.add('active');
+                    sendNetwork.value = net;
+                    updateNetworkDisplay(net);
+                    populateTokens(net);
+                    sendToken.value = tok;
+                    updateTokenDisplay(tok);
+                    updateBalanceHint();
+                    showToast(`تم التحديد: ${tok} على ${NETWORKS[net].name}`, 'success');
+                });
+            });
+        }
+
+        // ============================================================
+        //  NETWORK SELECT WITH ICONS
+        // ============================================================
+        function buildNetworkDropdown() {
+            networkDropdown.innerHTML = '';
+            for (const [key, net] of Object.entries(NETWORKS)) {
+                const opt = document.createElement('div');
+                opt.className = 'network-option';
+                opt.dataset.value = key;
+                const firstLetter = net.native.charAt(0);
+                opt.innerHTML = `
+                    <div class="net-icon" style="background:${net.color};">${firstLetter}</div>
+                    <div class="net-info">
+                        <div class="net-name">${net.name}</div>
+                        <div class="net-label">${net.label}</div>
+                    </div>
+                    <div class="chain-id">Chain ${net.chainId}</div>
+                `;
+                opt.addEventListener('click', () => {
+                    sendNetwork.value = key;
+                    updateNetworkDisplay(key);
+                    populateTokens(key);
+                    networkDropdown.classList.remove('show');
+                    updateBalanceHint();
+                    schedulePreSendEstimate();
+                });
+                networkDropdown.appendChild(opt);
+            }
+        }
+        function updateNetworkDisplay(netKey) {
+            const net = NETWORKS[netKey];
+            if (!net) return;
+            networkSelectIcon.textContent = net.native.charAt(0);
+            networkSelectIcon.style.background = net.color;
+            networkSelectName.textContent = net.name;
+            networkSelectLabel.textContent = net.label;
+        }
+        networkSelectDisplay.addEventListener('click', () => {
+            networkDropdown.classList.toggle('show');
+        });
+        document.addEventListener('click', (e) => {
+            if (!networkSelectDisplay.contains(e.target) && !networkDropdown.contains(e.target)) {
+                networkDropdown.classList.remove('show');
+            }
+        });
+
+        // ============================================================
+        //  TOKEN SELECT WITH ICONS
+        // ============================================================
+        function populateTokens(netKey) {
+            const tokens = TOKENS[netKey];
+            sendToken.innerHTML = '';
+            tokenDropdown.innerHTML = '';
+            for (const [key, tok] of Object.entries(tokens)) {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = tok.symbol;
+                sendToken.appendChild(opt);
+
+                const iconUrl = getTokenIconUrl(tok.symbol);
+                const color = getTokenColor(tok.symbol);
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'token-option';
+                optionDiv.dataset.value = key;
+                if (iconUrl) {
+                    optionDiv.innerHTML = `<img src="${iconUrl}" class="tok-icon" alt="${tok.symbol}" onerror="this.style.display='none'; this.parentElement.querySelector('.tok-fallback').style.display='flex';"><div class="tok-fallback" style="display:none;background:${color};">${tok.symbol.charAt(0)}</div><span class="tok-name">${tok.symbol}</span>`;
+                } else {
+                    optionDiv.innerHTML = `<div class="tok-fallback" style="background:${color};">${tok.symbol.charAt(0)}</div><span class="tok-name">${tok.symbol}</span>`;
+                }
+                optionDiv.addEventListener('click', () => {
+                    sendToken.value = key;
+                    updateTokenDisplay(key);
+                    tokenDropdown.classList.remove('show');
+                    updateBalanceHint();
+                    schedulePreSendEstimate();
+                });
+                tokenDropdown.appendChild(optionDiv);
+            }
+            if (!sendToken.value && sendToken.options.length) sendToken.selectedIndex = 0;
+            selectedToken = sendToken.value;
+            updateTokenDisplay(selectedToken);
+            updateBalanceHint();
+            schedulePreSendEstimate();
+        }
+        function updateTokenDisplay(tokKey) {
+            const netKey = sendNetwork.value;
+            const tok = TOKENS[netKey]?.[tokKey];
+            if (!tok) return;
+            const iconUrl = getTokenIconUrl(tok.symbol);
+            const color = getTokenColor(tok.symbol);
+            tokenSelectName.textContent = tok.symbol;
+            if (iconUrl) {
+                tokenSelectImg.src = iconUrl;
+                tokenSelectImg.alt = tok.symbol;
+                tokenSelectImg.style.display = 'block';
+                tokenSelectImg.onerror = function() {
+                    this.style.display = 'none';
+                    tokenSelectFallback.style.display = 'flex';
+                    tokenSelectFallback.style.background = color;
+                    tokenSelectFallback.textContent = tok.symbol.charAt(0);
+                };
+                tokenSelectFallback.style.display = 'none';
+            } else {
+                tokenSelectImg.style.display = 'none';
+                tokenSelectFallback.style.display = 'flex';
+                tokenSelectFallback.style.background = color;
+                tokenSelectFallback.textContent = tok.symbol.charAt(0);
+            }
+        }
+        tokenSelectDisplay.addEventListener('click', () => {
+            tokenDropdown.classList.toggle('show');
+        });
+        document.addEventListener('click', (e) => {
+            if (!tokenSelectDisplay.contains(e.target) && !tokenDropdown.contains(e.target)) {
+                tokenDropdown.classList.remove('show');
+            }
+        });
+        let estimateRequestId = 0;
+        let estimateTimer = null;
+        function resetPreSendEstimate(message = 'أدخل العنوان والكمية لبدء التقدير') {
+            preGasPrice.textContent = '--'; preGasLimit.textContent = '--'; preGasNative.textContent = '--'; preGasUsdt.textContent = '--';
+            preGasStatus.textContent = message; preGasStatus.style.color = '#94a3b8';
+        }
+        function schedulePreSendEstimate() {
+            clearTimeout(estimateTimer);
+            estimateTimer = setTimeout(() => estimatePreSendTransaction(), 350);
+        }
+        async function estimatePreSendTransaction() {
+            const requestId = ++estimateRequestId;
+            const netKey = sendNetwork.value, tokKey = sendToken.value;
+            const toAddr = sendTo.value.trim(), amount = Number(sendAmount.value);
+            const token = TOKENS[netKey]?.[tokKey], net = NETWORKS[netKey];
+            if (!token || !net || !walletAddress || !ethers.utils.isAddress(toAddr) || !Number.isFinite(amount) || amount <= 0) {
+                resetPreSendEstimate(); return;
+            }
+            try {
+                preGasStatus.textContent = 'جاري حساب الغاز والتكلفة...'; preGasStatus.style.color = '#93bbfc';
+                const provider = getProvider(netKey);
+                const feeData = await provider.getFeeData();
+                const gasPrice = feeData.gasPrice || feeData.maxFeePerGas;
+                if (!gasPrice) throw new Error('لم يتم الحصول على سعر الغاز');
+                let tx;
+                if (token.address === 'native') {
+                    tx = {from:walletAddress, to:toAddr, value:ethers.utils.parseEther(String(amount))};
+                } else {
+                    const iface = new ethers.utils.Interface(['function transfer(address to,uint256 amount)']);
+                    tx = {from:walletAddress, to:token.address, value:0, data:iface.encodeFunctionData('transfer',[toAddr,ethers.utils.parseUnits(String(amount),token.decimals)])};
+                }
+                let gasLimit, exactEstimate = true;
+                try {
+                    gasLimit = await provider.estimateGas(tx);
+                    gasLimit = gasLimit.mul(120).div(100);
+                } catch (estimateError) {
+                    exactEstimate = false;
+                    // Conservative fallback: still show a useful fee estimate when the node
+                    // rejects estimation because the sender currently lacks funds.
+                    gasLimit = ethers.BigNumber.from(token.address === 'native' ? 21000 : 100000);
+                }
+                const gasCostWei = gasLimit.mul(gasPrice);
+                const gasCostNative = ethers.utils.formatEther(gasCostWei);
+                let usd = null;
+                try { const price = await getPrice(net.coingeckoId); if (price) usd = Number(gasCostNative) * Number(price); } catch (_) {}
+                if (requestId !== estimateRequestId) return;
+                preGasPrice.textContent = `${ethers.utils.formatUnits(gasPrice,'gwei')} Gwei`;
+                preGasLimit.textContent = gasLimit.toString();
+                preGasNative.textContent = `${Number(gasCostNative).toFixed(8)} ${net.native}`;
+                preGasUsdt.textContent = usd == null ? 'غير متاح حاليًا' : `$${usd.toFixed(4)} USDT`;
+                preGasStatus.textContent = exactEstimate ? 'تم تحديث التقدير تلقائيًا قبل الإرسال' : 'تقدير تقريبي؛ العقدة رفضت التقدير الدقيق بسبب الرصيد أو حالة الشبكة';
+                preGasStatus.style.color = exactEstimate ? '#4ade80' : '#fbbf24';
+            } catch (e) {
+                if (requestId !== estimateRequestId) return;
+                resetPreSendEstimate('تعذر تقدير الغاز: ' + (e.reason || e.message || 'تحقق من العنوان والرصيد'));
+                preGasStatus.style.color = '#f87171';
+            }
+        }
+        sendNetwork.addEventListener('change', () => {
+            updateNetworkDisplay(sendNetwork.value); populateTokens(sendNetwork.value); schedulePreSendEstimate();
+        });
+        sendToken.addEventListener('change', () => {
+            updateTokenDisplay(sendToken.value); updateBalanceHint(); schedulePreSendEstimate();
+        });
+        sendTo.addEventListener('input', schedulePreSendEstimate);
+        sendAmount.addEventListener('input', schedulePreSendEstimate);
+
+        // ============================================================
+        //  BALANCE HINT & MAX
+        // ============================================================
+        function updateBalanceHint() {
+            const netKey = sendNetwork.value;
+            const tokKey = sendToken.value;
+            const bals = balances[netKey] || {};
+            const bal = bals[tokKey] || '0.00';
+            const num = parseFloat(bal);
+            const display = num < 0.000001 ? '0.0000' : num.toFixed(6);
+            const sym = TOKENS[netKey]?.[tokKey]?.symbol || '';
+            balanceHint.textContent = `الرصيد المتاح: ${display} ${sym}`;
+            return num;
+        }
+        maxAmountBtn.addEventListener('click', () => {
+            const netKey = sendNetwork.value;
+            const tokKey = sendToken.value;
+            const bals = balances[netKey] || {};
+            const bal = bals[tokKey] || '0.00';
+            const num = parseFloat(bal);
+            if (num > 0) { sendAmount.value = num.toFixed(6); schedulePreSendEstimate(); }
+            else { showToast('الرصيد صفر', 'error'); }
+        });
+
+        // ============================================================
+        //  MULTI-WALLET HOME + PUBLIC / HOT LOGIN MODES
+        // ============================================================
+        const WALLETS_STORE_KEY = 'walletProfiles.v2';
+        const HOT_PROFILE_VERSION = 2;
+        const HOT_PBKDF2_ITERATIONS = 250000;
+        const textEncoder = new TextEncoder();
+        const textDecoder = new TextDecoder();
+        const toB64 = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes)));
+        const fromB64 = value => Uint8Array.from(atob(value), c => c.charCodeAt(0));
+        async function deriveHotKey(password, salt) {
+            const material = await crypto.subtle.importKey('raw', textEncoder.encode(password), 'PBKDF2', false, ['deriveKey']);
+            return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:HOT_PBKDF2_ITERATIONS, hash:'SHA-256'}, material, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+        }
+        async function encryptPrivateKey(privateKey, password) {
+            const salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
+            const key=await deriveHotKey(password,salt); const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,textEncoder.encode(privateKey));
+            return {version:1,salt:toB64(salt),iv:toB64(iv),ciphertext:toB64(ciphertext),iterations:HOT_PBKDF2_ITERATIONS};
+        }
+        async function decryptPrivateKey(profile,password) {
+            const key=await deriveHotKey(password,fromB64(profile.salt));
+            const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:fromB64(profile.iv)},key,fromB64(profile.ciphertext));
+            return textDecoder.decode(plain);
+        }
+        async function createLoginVerifier(password) {
+            const salt=crypto.getRandomValues(new Uint8Array(16));
+            const digest=await crypto.subtle.digest('SHA-256',new Uint8Array([...salt,...textEncoder.encode(password)]));
+            return {loginSalt:toB64(salt),loginVerifier:toB64(digest)};
+        }
+        async function verifyLoginPassword(profile,password) {
+            const digest=await crypto.subtle.digest('SHA-256',new Uint8Array([...fromB64(profile.loginSalt),...textEncoder.encode(password)]));
+            return toB64(digest)===profile.loginVerifier;
+        }
+        function loadProfiles() {
+            try { walletProfiles=JSON.parse(localStorage.getItem(WALLETS_STORE_KEY)||'[]'); } catch(e) { walletProfiles=[]; }
+            // Migrate the previous single hot-wallet record without exposing its key.
+            if (!walletProfiles.length) {
+                try { const old=JSON.parse(localStorage.getItem('hotWalletProfile.v1')||'null'); if(old?.address&&old?.ciphertext) {
+                    walletProfiles=[{id:'migrated-hot-'+Date.now(),type:'hot',name:old.name||'المحفظة الساخنة',address:old.address,profileVersion:old.profileVersion||2,salt:old.salt,iv:old.iv,ciphertext:old.ciphertext,iterations:old.iterations,loginSalt:old.loginSalt,loginVerifier:old.loginVerifier}];
+                    localStorage.setItem(WALLETS_STORE_KEY,JSON.stringify(walletProfiles));
+                }} catch(e) {}
+            }
+        }
+        function saveProfiles(){ localStorage.setItem(WALLETS_STORE_KEY,JSON.stringify(walletProfiles)); }
+        function clearLoginFields(){ [loginAddress,loginPrivateKey,loginPassword,loginPasswordConfirm,paymentPassword,paymentPasswordConfirm,loginWalletName].forEach(x=>x.value=''); }
+        function resetLoginForm(){ activeProfileId=''; clearLoginFields(); loginForm.style.display='flex'; profileList.style.display='none'; newWalletBtn.style.display='none'; currentAccessMode='hot'; applyLoginMode(); }
+        function showProfileHome(){ loginForm.style.display='none'; profileList.style.display='flex'; newWalletBtn.style.display='block'; renderProfileList(); }
+        function renderProfileList(){
+            profileList.innerHTML='';
+            if(!walletProfiles.length){ profileList.innerHTML='<div style="color:#64748b;text-align:center;padding:14px;">لا توجد محافظ محفوظة بعد</div>'; return; }
+            walletProfiles.forEach(profile=>{
+                const b=document.createElement('button'); b.className='btn-secondary'; b.style.textAlign='right'; b.innerHTML=`<strong>${profile.name||'محفظة بلا اسم'}</strong><br><small>${profile.type==='hot'?'ساخنة — مفتاح خاص':'عامة — عنوان فقط'} · ${profile.address.slice(0,10)}...${profile.address.slice(-6)}</small>`;
+                b.onclick=async()=>{
+                    activeProfileId=profile.id;
+                    currentAccessMode=profile.type;
+                    if(profile.type==='public'){
+                        try{ await showWallet(profile); }catch(e){ showToast('تعذر فتح المحفظة العامة: '+e.message,'error'); }
+                        return;
+                    }
+                    loginForm.style.display='flex'; profileList.style.display='none'; newWalletBtn.style.display='none'; loginWalletName.value=profile.name||''; applyLoginMode();
+                }; profileList.appendChild(b);
+            });
+        }
+        function applyLoginMode(){
+            const hot=currentAccessMode==='hot';
+            loginAddress.style.display=hot?'none':'block'; loginPrivateKey.style.display=hot&&(!activeProfileId)?'block':'none';
+            loginPassword.style.display=hot?'block':'none'; loginPasswordConfirm.style.display=hot&&(!activeProfileId)?'block':'none';
+            paymentPassword.style.display=hot&&(!activeProfileId)?'block':'none'; paymentPasswordConfirm.style.display=hot&&(!activeProfileId)?'block':'none';
+            publicModeBtn.className=hot?'btn-secondary':'btn-primary'; hotModeBtn.className=hot?'btn-primary':'btn-secondary';
+            authModeNote.textContent=hot?(activeProfileId?'أدخل كلمة سر الدخول. ستُطلب كلمة سر الدفع عند الإرسال.':'إعداد محفظة ساخنة: أدخل المفتاح الخاص وكلمة سر الدخول وكلمة سر الدفع.'):'أدخل عنوانًا عامًا؛ هذا المسار للعرض ومسار المعاملة غير الموقعة كما في الملف الأصلي.';
+            loginBtn.textContent=activeProfileId?'فتح المحفظة':(hot?'إنشاء محفظة ساخنة':'إضافة محفظة عامة');
+        }
+        async function showWallet(profile){
+            activeProfileId=profile.id; currentAccessMode=profile.type; walletAddress=profile.address; walletName=profile.name||'محفظة'; activeWallet=null;
+            shortAddress.textContent=walletAddress.slice(0,10)+'...'+walletAddress.slice(-6); receiveAddressText.textContent=walletAddress; receiveQr.innerHTML='';
+            new QRCode(receiveQr,{text:walletAddress,width:280,height:280,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+            loginSection.style.display='none'; walletSection.style.display='flex'; applyAccessModeUI(); showToast('جاري تحميل الأرصدة...','info'); buildNetworkDropdown();
+            if(!sendNetwork.value) sendNetwork.value='ethereum';
+            populateTokens(sendNetwork.value);
+            const balData=await fetchAllBalances(walletAddress); await renderOverview(balData); updateBalanceHint(); schedulePreSendEstimate(); await fetchTransactionHistory(walletAddress); showToast('تم فتح المحفظة','success');
+        }
+        function applyAccessModeUI(){
+            const hot=currentAccessMode==='hot';
+            preSendEstimate.style.display=hot?'block':'none'; unsignedOutput.style.display='none'; signedInput.style.display='none';
+            document.querySelector('#tabSend .card .card-title').textContent=hot?'🚀 إرسال مباشر ساخن':'📄 إنشاء معاملة غير موقعة';
+            createUnsignedBtn.textContent=hot?'إرسال مباشر':'تكوين المعاملة غير الموقعة';
+        }
+        function updateAuthHome(){ loadProfiles(); showProfileHome(); }
+        loadProfiles(); updateAuthHome(); applyLoginMode();
+        publicModeBtn.addEventListener('click',()=>{currentAccessMode='public';activeProfileId='';clearLoginFields();loginForm.style.display='flex';profileList.style.display='none';newWalletBtn.style.display='none';applyLoginMode();});
+        hotModeBtn.addEventListener('click',()=>{currentAccessMode='hot';activeProfileId='';clearLoginFields();loginForm.style.display='flex';profileList.style.display='none';newWalletBtn.style.display='none';applyLoginMode();});
+        newWalletBtn.addEventListener('click',resetLoginForm); cancelNewWalletBtn.addEventListener('click',showProfileHome);
+        loginBtn.addEventListener('click',async()=>{
+            const name=loginWalletName.value.trim();
+            try{
+                if(currentAccessMode==='public'){
+                    const addr=loginAddress.value.trim(); if(!ethers.utils.isAddress(addr)) return showToast('الرجاء إدخال عنوان عام صحيح','error');
+                    const profile=activeProfileId?walletProfiles.find(p=>p.id===activeProfileId):null;
+                    const item=profile||{id:'public-'+Date.now(),type:'public',name:name||('محفظة '+addr.slice(0,8)),address:addr};
+                    item.name=name||item.name; item.address=addr; if(!profile) walletProfiles.push(item); saveProfiles(); await showWallet(item); return;
+                }
+                const profile=activeProfileId?walletProfiles.find(p=>p.id===activeProfileId):null; const loginPass=loginPassword.value;
+                if(loginPass.length<10) return showToast('كلمة سر الدخول يجب أن تكون 10 أحرف على الأقل','error');
+                if(profile){ if(name && profile.name!==name) return showToast('اسم المحفظة غير صحيح','error'); if(!profile.loginVerifier||!(await verifyLoginPassword(profile,loginPass))) return showToast('كلمة سر الدخول غير صحيحة','error'); await showWallet(profile); return; }
+                const pk=loginPrivateKey.value.trim(), loginConfirm=loginPasswordConfirm.value, payPass=paymentPassword.value, payConfirm=paymentPasswordConfirm.value;
+                if(!/^0x[0-9a-fA-F]{64}$/.test(pk)) return showToast('المفتاح الخاص غير صحيح','error'); if(loginPass!==loginConfirm) return showToast('كلمتا سر الدخول غير متطابقتين','error'); if(payPass.length<10) return showToast('كلمة سر الدفع يجب أن تكون 10 أحرف على الأقل','error'); if(payPass!==payConfirm) return showToast('كلمتا سر الدفع غير متطابقتين','error');
+                const candidate=new ethers.Wallet(pk), encrypted=await encryptPrivateKey(pk,payPass), login=await createLoginVerifier(loginPass);
+                const item={id:'hot-'+Date.now(),type:'hot',name:name||'محفظة ساخنة',address:candidate.address,profileVersion:HOT_PROFILE_VERSION,...encrypted,...login}; walletProfiles.push(item); saveProfiles(); await showWallet(item);
+            }catch(e){showToast('تعذر فتح المحفظة: '+e.message,'error');}
+        });
+        [loginAddress,loginPrivateKey,loginPassword,loginPasswordConfirm,paymentPassword,paymentPasswordConfirm,loginWalletName].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')loginBtn.click();}));
+        logoutBtn.addEventListener('click',()=>{walletSection.style.display='none';loginSection.style.display='flex';walletAddress='';walletName='';activeWallet=null;clearLoginFields();stopAllScanners();applyAccessModeUI();updateAuthHome();showToast('تم الخروج ومسح بيانات الجلسة','info');});
+        // ============================================================
+        //  COPY
+        // ============================================================
+        function copyText(text, msg = 'تم النسخ') {
+            if (!text || text === '...' || text === '-') {
+                showToast('لا يوجد نص للنسخ', 'error');
+                return;
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast(msg, 'success');
+                }).catch(() => { fallbackCopy(text, msg); });
+            } else { fallbackCopy(text, msg); }
+        }
+        function fallbackCopy(text, msg) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                showToast(msg, 'success');
+            } catch (e) { showToast('فشل النسخ', 'error'); }
+            document.body.removeChild(ta);
+        }
+        copyAddressBtn.addEventListener('click', () => copyText(walletAddress, 'تم نسخ العنوان'));
+        copyReceiveBtn.addEventListener('click', () => copyText(walletAddress, 'تم نسخ العنوان'));
+        copyUnsignedBtn.addEventListener('click', () => {
+            const text = unsignedTxText.textContent;
+            if (text && text !== '...') copyText(text, 'تم نسخ المعاملة غير الموقعة');
+        });
+        copyHashBtn.addEventListener('click', () => {
+            const text = txHashDisplay.textContent;
+            if (text && text !== '...') copyText(text, 'تم نسخ الهاش');
+        });
+
+        // ============================================================
+        //  QR SCANNERS
+        // ============================================================
+        function stopAllScanners() {
+            if (recipientScannerInstance) {
+                try { recipientScannerInstance.stop().catch(() => {}); } catch (e) {}
+                recipientScannerInstance = null;
+            }
+            if (signedScannerInstance) {
+                try { signedScannerInstance.stop().catch(() => {}); } catch (e) {}
+                signedScannerInstance = null;
+            }
+            recipientScannerContainer.classList.add('hidden');
+            signedScannerContainer.classList.add('hidden');
+            scanRecipientBtn.classList.remove('active');
+            scanSignedBtn.classList.remove('active');
+        }
+        async function ensureCameraAccess() {
+            if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('الكاميرا تحتاج إلى HTTPS أو تشغيل التطبيق من داخل APK؛ فتح الملف مباشرة بصيغة file:// قد يمنع الوصول إليها.');
+            }
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+            stream.getTracks().forEach(track => track.stop());
+        }
+        async function initRecipientScanner() {
+            if (recipientScannerInstance) {
+                recipientScannerContainer.classList.toggle('hidden');
+                if (!recipientScannerContainer.classList.contains('hidden')) {
+                    try { recipientScannerInstance.resume(); } catch (e) {}
+                } else {
+                    try { recipientScannerInstance.pause(); } catch (e) {}
+                }
+                return;
+            }
+            recipientScannerContainer.classList.remove('hidden');
+            scanRecipientBtn.classList.add('active');
+            try { await ensureCameraAccess(); } catch (err) {
+                showToast('تعذر الوصول إلى الكاميرا: ' + err.message, 'error');
+                recipientScannerContainer.classList.add('hidden');
+                scanRecipientBtn.classList.remove('active');
+                return;
+            }
+            const html5QrCode = new Html5Qrcode("recipientScanner");
+            recipientScannerInstance = html5QrCode;
+            const config = { fps: 15, qrbox: { width: 180, height: 180 }, aspectRatio: 1.0 };
+            html5QrCode.start({ facingMode: "environment" }, config,
+                (decodedText) => {
+                    if (decodedText && ethers.utils.isAddress(decodedText)) {
+                        sendTo.value = decodedText;
+                        showToast('تم مسح عنوان المستقبل', 'success');
+                        stopRecipientScanner();
+                    } else if (decodedText) { showToast('العنوان غير صالح', 'error'); }
+                }, () => {}
+            ).catch((err) => {
+                showToast('خطأ في الكاميرا: ' + err.message, 'error');
+                recipientScannerContainer.classList.add('hidden');
+                scanRecipientBtn.classList.remove('active');
+                recipientScannerInstance = null;
+            });
+        }
+        function stopRecipientScanner() {
+            if (recipientScannerInstance) {
+                try { recipientScannerInstance.stop().catch(() => {}); } catch (e) {}
+                recipientScannerInstance = null;
+            }
+            recipientScannerContainer.classList.add('hidden');
+            scanRecipientBtn.classList.remove('active');
+        }
+        scanRecipientBtn.addEventListener('click', () => {
+            if (recipientScannerContainer.classList.contains('hidden')) {
+                initRecipientScanner();
+            } else { stopRecipientScanner(); }
+        });
+        async function initSignedScanner() {
+            if (signedScannerInstance) {
+                signedScannerContainer.classList.toggle('hidden');
+                if (!signedScannerContainer.classList.contains('hidden')) {
+                    try { signedScannerInstance.resume(); } catch (e) {}
+                } else {
+                    try { signedScannerInstance.pause(); } catch (e) {}
+                }
+                return;
+            }
+            signedScannerContainer.classList.remove('hidden');
+            scanSignedBtn.classList.add('active');
+            try { await ensureCameraAccess(); } catch (err) {
+                showToast('تعذر الوصول إلى الكاميرا: ' + err.message, 'error');
+                signedScannerContainer.classList.add('hidden');
+                scanSignedBtn.classList.remove('active');
+                return;
+            }
+            const html5QrCode = new Html5Qrcode("signedScanner");
+            signedScannerInstance = html5QrCode;
+            const config = { fps: 15, qrbox: { width: 180, height: 180 }, aspectRatio: 1.0 };
+            html5QrCode.start({ facingMode: "environment" }, config,
+                (decodedText) => {
+                    if (decodedText && decodedText.startsWith('0x')) {
+                        signedTxInput.value = decodedText;
+                        showToast('تم مسح المعاملة الموقعة', 'success');
+                        stopSignedScanner();
+                        checkSignedTx();
+                    } else if (decodedText) { showToast('البيانات غير صالحة', 'error'); }
+                }, () => {}
+            ).catch((err) => {
+                showToast('خطأ في الكاميرا: ' + err.message, 'error');
+                signedScannerContainer.classList.add('hidden');
+                scanSignedBtn.classList.remove('active');
+                signedScannerInstance = null;
+            });
+        }
+        function stopSignedScanner() {
+            if (signedScannerInstance) {
+                try { signedScannerInstance.stop().catch(() => {}); } catch (e) {}
+                signedScannerInstance = null;
+            }
+            signedScannerContainer.classList.add('hidden');
+            scanSignedBtn.classList.remove('active');
+        }
+        scanSignedBtn.addEventListener('click', () => {
+            if (signedScannerContainer.classList.contains('hidden')) {
+                initSignedScanner();
+            } else { stopSignedScanner(); }
+        });
+
+        // ============================================================
+        // ============================================================
+        //  SEND ROUTER: PUBLIC ORIGINAL FLOW OR HOT DIRECT FLOW
+        // ============================================================
+        async function createUnsignedPublicTransaction(){
+            if(!sendNetwork.value) sendNetwork.value='ethereum';
+            if(!sendToken.value) populateTokens(sendNetwork.value);
+            const netKey=sendNetwork.value,tokKey=sendToken.value,toAddr=sendTo.value.trim(),amount=parseFloat(sendAmount.value),token=TOKENS[netKey]?.[tokKey],net=NETWORKS[netKey];
+            if(!ethers.utils.isAddress(toAddr)) return showToast('عنوان المستقبل غير صحيح','error'); if(!amount||amount<=0) return showToast('الرجاء إدخال كمية صحيحة','error'); if(!token||!net)return showToast('اختر الشبكة والعملة','error');
+            try{ createUnsignedBtn.disabled=true; const provider=getProvider(netKey),nonce=await provider.getTransactionCount(walletAddress,'pending'),gasPrice=await provider.getGasPrice(); let value='0',data='0x',to=toAddr;
+                if(token.address==='native') value=ethers.utils.parseEther(String(amount)); else {const contract=getTokenContract(netKey,tokKey);data=contract.interface.encodeFunctionData('transfer',[toAddr,ethers.utils.parseUnits(String(amount),token.decimals)]);to=token.address;}
+                let gasLimit; try{gasLimit=(await provider.estimateGas({from:walletAddress,to,value,data})).mul(120).div(100);}catch(e){gasLimit=ethers.BigNumber.from(210000);}
+                const unsignedTx={from:walletAddress,to,value,data,gasLimit,gasPrice,nonce,chainId:net.chainId}; currentUnsignedTx=unsignedTx;
+                const txJson=JSON.stringify(unsignedTx,(k,v)=>v&&v._hex?v._hex:v,2);
+                unsignedTxText.textContent=txJson;
+                unsignedOutput.style.display='block';
+                signedInput.style.display='block';
+                unsignedQr.innerHTML='';
+                new QRCode(unsignedQr,{text:txJson,width:280,height:280,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+                txFrom.textContent=walletAddress; txTo.textContent=toAddr; txValue.textContent=`${amount} ${token.symbol}`; txGas.textContent=gasLimit.toString(); txGasPrice.textContent=ethers.utils.formatUnits(gasPrice,'gwei')+' Gwei'; txNonce.textContent=nonce; txCostUsdt.textContent='$'+(parseFloat(ethers.utils.formatEther(gasPrice.mul(gasLimit)))*(await getPrice(net.coingeckoId)||0)).toFixed(4)+' USDT';
+                unsignedOutput.scrollIntoView({behavior:'smooth',block:'start'});
+                showToast('تم تكوين المعاملة غير الموقعة ورمز QR','success');
+            }catch(e){showToast('خطأ: '+e.message,'error');}finally{createUnsignedBtn.disabled=false;}
+        }
+        function checkSignedTx(){const val=signedTxInput.value.trim();currentSignedTx=(val&&val.startsWith('0x')&&val.length>20)?val:null;broadcastBtn.disabled=!currentSignedTx;}
+        async function executePublicBroadcast(){try{countdownContainer.classList.add('hidden');const netKey=sendNetwork.value,txResponse=await getProvider(netKey).sendTransaction(currentSignedTx);await txResponse.wait(1);txHashDisplay.textContent=txResponse.hash;broadcastResult.classList.remove('hidden');addToHistory(txResponse.hash,'send',netKey,selectedToken,sendAmount.value,sendTo.value);showToast('تم بث المعاملة بنجاح!','success');}catch(e){showToast('خطأ في البث: '+e.message,'error');}finally{isBroadcasting=false;broadcastBtn.disabled=false;}}
+        signedTxInput.addEventListener('input',checkSignedTx);
+        broadcastBtn.addEventListener('click',()=>{if(currentAccessMode!=='public')return;if(!currentSignedTx)return showToast('الرجاء إدخال المعاملة الموقعة','error');if(isBroadcasting)return;isBroadcasting=true;broadcastCountdown=10;countdownContainer.classList.remove('hidden');countdownTimer.textContent=broadcastCountdown;broadcastBtn.disabled=true;broadcastTimer=setInterval(()=>{broadcastCountdown--;countdownTimer.textContent=broadcastCountdown;if(broadcastCountdown<=0){clearInterval(broadcastTimer);broadcastTimer=null;executePublicBroadcast();}},1000);});
+        cancelBroadcastBtn.addEventListener('click',()=>{if(broadcastTimer){clearInterval(broadcastTimer);broadcastTimer=null;}isBroadcasting=false;countdownContainer.classList.add('hidden');broadcastBtn.disabled=false;});
+        createUnsignedBtn.addEventListener('click',async()=>{
+            if(currentAccessMode==='public') return createUnsignedPublicTransaction();
+            const profile=walletProfiles.find(p=>p.id===activeProfileId); if(!profile||profile.type!=='hot') return showToast('افتح محفظة ساخنة أولًا','error');
+            const password=window.prompt('أدخل كلمة سر الدفع لتأكيد الإرسال'); if(password===null)return;
+            let signingWallet; try{const privateKey=await decryptPrivateKey(profile,password);signingWallet=new ethers.Wallet(privateKey);if(signingWallet.address.toLowerCase()!==walletAddress.toLowerCase())throw new Error('المفتاح لا يطابق العنوان');}catch(e){return showToast('كلمة سر الدفع غير صحيحة أو الملف تالف','error');}
+            const netKey=sendNetwork.value,tokKey=sendToken.value,toAddr=sendTo.value.trim(),amount=parseFloat(sendAmount.value),token=TOKENS[netKey]?.[tokKey]; if(!ethers.utils.isAddress(toAddr))return showToast('عنوان المستقبل غير صحيح','error');if(!amount||amount<=0)return showToast('الرجاء إدخال كمية صحيحة','error');
+            try{createUnsignedBtn.disabled=true;const provider=getProvider(netKey);signingWallet=signingWallet.connect(provider);let txResponse;if(token.address==='native')txResponse=await signingWallet.sendTransaction({to:toAddr,value:ethers.utils.parseEther(String(amount))});else{const contract=new ethers.Contract(token.address,['function transfer(address to,uint256 amount) returns (bool)'],signingWallet);txResponse=await contract.transfer(toAddr,ethers.utils.parseUnits(String(amount),token.decimals));}await txResponse.wait(1);addToHistory(txResponse.hash,'send',netKey,tokKey,String(amount),toAddr);const balData=await fetchAllBalances(walletAddress);await renderOverview(balData);updateBalanceHint();showToast('تم الإرسال بنجاح: '+txResponse.hash.slice(0,12)+'...','success');sendAmount.value='';sendTo.value='';}catch(e){showToast('تعذر الإرسال: '+(e.reason||e.message),'error');}finally{createUnsignedBtn.disabled=false;}
+        });
+        // ============================================================
+        //  HISTORY - Fetch from Etherscan API v2
+        // ============================================================
+        async function fetchTransactionHistory(address, showLoading = true) {
+            if (isHistoryLoading) return;
+            isHistoryLoading = true;
+            if (showLoading) {
+                historyContainer.innerHTML = `<div style="color:#64748b;text-align:center;padding:40px 0;"><div class="spinner" style="margin:0 auto 12px;"></div>جاري جلب السجل...</div>`;
+            }
+            txHistoryRaw = [];
+            let totalFetched = 0;
+            const nonFreeNetworks = ['bsc', 'avalanche', 'base'];
+            const explorerUrls = {
+                bsc: 'https://bscscan.com',
+                avalanche: 'https://snowtrace.io', 
+                base: 'https://basescan.org'
+            };
+
+            for (const [netKey, net] of Object.entries(NETWORKS)) {
+                const chainId = net.chainId;
+                const tokens = TOKENS[netKey];
+
+                // Skip non-free networks - they need their own explorer
+                if (nonFreeNetworks.includes(netKey)) {
+                    continue;
+                }
+
+                // Fetch native transactions (txlist)
+                try {
+                    const txlistUrl = `https://api.etherscan.io/v2/api?chainid=${chainId}&module=account&action=txlist&address=${address}&apikey=${ETHERSCAN_API_KEY}`;
+                    const txlistRes = await fetch(txlistUrl);
+                    const txlistData = await txlistRes.json();
+                    if (txlistData.status === '1' && txlistData.result && Array.isArray(txlistData.result)) {
+                        for (const tx of txlistData.result) {
+                            const value = ethers.utils.formatEther(tx.value);
+                            if (parseFloat(value) === 0) continue;
+                            const isReceive = tx.to.toLowerCase() === address.toLowerCase();
+                            const exists = txHistoryRaw.some(h => h.hash === tx.hash && h.network === netKey);
+                            if (exists) continue;
+                            txHistoryRaw.push({
+                                hash: tx.hash, network: netKey, token: net.native, tokenAddress: 'native',
+                                amount: value, from: tx.from, to: tx.to,
+                                type: isReceive ? 'receive' : 'send',
+                                block: parseInt(tx.blockNumber) || 0,
+                                timestamp: tx.timeStamp ? parseInt(tx.timeStamp) * 1000 : Date.now(),
+                                status: tx.txreceipt_status === '1' ? 'success' : (tx.txreceipt_status === '0' ? 'failed' : 'pending')
+                            });
+                            totalFetched++;
+                        }
+                    }
+                } catch (e) { console.warn(`txlist failed for ${netKey}:`, e.message); }
+
+                // Fetch token transfers for each token
+                for (const [tokKey, tok] of Object.entries(tokens)) {
+                    if (tok.address === 'native') continue;
+                    try {
+                        const tokentxUrl = `https://api.etherscan.io/v2/api?chainid=${chainId}&module=account&action=tokentx&contractaddress=${tok.address}&address=${address}&apikey=${ETHERSCAN_API_KEY}`;
+                        const tokRes = await fetch(tokentxUrl);
+                        const tokData = await tokRes.json();
+                        if (tokData.status === '1' && tokData.result && Array.isArray(tokData.result)) {
+                            for (const tx of tokData.result) {
+                                const isReceive = tx.to.toLowerCase() === address.toLowerCase();
+                                const amount = ethers.utils.formatUnits(tx.value, tx.tokenDecimal || tok.decimals);
+                                const exists = txHistoryRaw.some(h => h.hash === tx.hash && h.token === tok.symbol);
+                                if (exists) continue;
+                                txHistoryRaw.push({
+                                    hash: tx.hash, network: netKey, token: tok.symbol, tokenAddress: tok.address,
+                                    amount: amount, from: tx.from, to: tx.to,
+                                    type: isReceive ? 'receive' : 'send',
+                                    block: parseInt(tx.blockNumber) || 0,
+                                    timestamp: tx.timeStamp ? parseInt(tx.timeStamp) * 1000 : Date.now(),
+                                    status: tx.txreceipt_status === '1' ? 'success' : (tx.txreceipt_status === '0' ? 'failed' : 'pending')
+                                });
+                                totalFetched++;
+                            }
+                        }
+                    } catch (e) { console.warn(`tokentx failed for ${netKey} ${tokKey}:`, e.message); }
+                }
+            }
+
+            txHistoryRaw.sort((a, b) => b.timestamp - a.timestamp);
+            const latestPrices = await fetchPrices();
+            txHistoryRaw.forEach(item => { const id = NETWORKS[item.network]?.coingeckoId || 'tether'; item.price = Number(latestPrices[id]?.usd || 0); item.usdValue = Number(item.amount) * item.price; });
+            applyHistoryFilters();
+
+            if (txHistoryRaw.length === 0) {
+                showToast('لا توجد معاملات لهذا العنوان', 'info');
+            } else {
+                showToast(`تم جلب ${txHistoryRaw.length} معاملة`, 'success');
+            }
+            isHistoryLoading = false;
+        }
+
+        // ============================================================
+        //  HISTORY FILTERS & RENDER
+        // ============================================================
+        function applyHistoryFilters() {
+            let filtered = txHistoryRaw;
+            if (activeHistoryNetwork !== 'all') {
+                filtered = filtered.filter(t => t.network === activeHistoryNetwork);
+            }
+            if (historySearchQuery) {
+                const q = historySearchQuery.toLowerCase();
+                filtered = filtered.filter(t => 
+                    (t.hash && t.hash.toLowerCase().includes(q)) ||
+                    (t.from && t.from.toLowerCase().includes(q)) ||
+                    (t.to && t.to.toLowerCase().includes(q)) ||
+                    (t.token && t.token.toLowerCase().includes(q))
+                );
+            }
+            renderHistoryList(filtered);
+            const netLabel = activeHistoryNetwork === 'all' ? 'جميع الشبكات' : NETWORKS[activeHistoryNetwork]?.name || activeHistoryNetwork;
+            historyCount.textContent = currentLang === 'en' ? `${filtered.length} transaction${filtered.length === 1 ? '' : 's'}` : `${filtered.length} معاملة`;
+            historyNetworkLabel.textContent = currentLang === 'en' ? (activeHistoryNetwork === 'all' ? 'All networks' : netLabel) : netLabel;
+        }
+
+        function renderHistoryList(items) {
+            const nonFreeNetworks = ['bsc', 'avalanche', 'base'];
+            const explorerUrls = {
+                bsc: 'https://bscscan.com',
+                avalanche: 'https://snowtrace.io',
+                base: 'https://basescan.org'
+            };
+            const explorerNames = {
+                bsc: 'BscScan',
+                avalanche: 'SnowTrace',
+                base: 'BaseScan'
+            };
+
+            if (items.length === 0) {
+                // Check if we're filtering by a non-free network
+                if (activeHistoryNetwork !== 'all' && nonFreeNetworks.includes(activeHistoryNetwork)) {
+                    const net = NETWORKS[activeHistoryNetwork];
+                    const explorerUrl = explorerUrls[activeHistoryNetwork];
+                    const explorerName = explorerNames[activeHistoryNetwork];
+                    historyContainer.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">🔗</div>
+                            <div class="title">${net.name}</div>
+                            <div class="sub">هذه الشبكة غير مدعومة في API المجاني</div>
+                            <a href="${explorerUrl}/address/${walletAddress}" target="_blank" 
+                               style="display:inline-block;margin-top:16px;padding:10px 24px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;">
+                                🔍 فتح ${explorerName}
+                            </a>
+                        </div>`;
+                } else {
+                    historyContainer.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">📭</div>
+                            <div class="title">لا توجد معاملات</div>
+                            <div class="sub">${historySearchQuery ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد معاملات في هذه الشبكة'}</div>
+                        </div>`;
+                }
+                return;
+            }
+            let html = '';
+            for (const item of items) {
+                const net = NETWORKS[item.network];
+                const color = net ? net.color : '#888';
+                const isReceive = item.type === 'receive';
+                const sign = isReceive ? '+' : '-';
+                const amountClass = isReceive ? 'positive' : 'negative';
+                const addr = isReceive ? item.from : item.to;
+                const date = new Date(item.timestamp);
+                const timeStr = new Intl.DateTimeFormat('en-GB', {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false}).format(date);
+                const status = item.status || 'success';
+                const statusText = currentLang === 'en' ? (status === 'success' ? '✓ Success' : (status === 'failed' ? '✗ Failed' : '⏳ Pending')) : (status === 'success' ? '✓ ناجحة' : (status === 'failed' ? '✗ فاشلة' : '⏳ معلقة'));
+                const statusClass = status === 'success' ? 'success' : (status === 'failed' ? 'failed' : 'pending');
+                const chainId = net ? net.chainId : 1;
+                const explorerLink = `https://api.etherscan.io/v2/api?chainid=${chainId}&module=proxy&action=eth_getTransactionByHash&txhash=${item.hash}&apikey=${ETHERSCAN_API_KEY}`;
+                const iconHTML = getTokenIconHTML(item.token, 24);
+
+                html += `
+                    <div class="history-item">
+                        <div class="h-header">
+                            <div class="h-left">
+                                <div class="h-icon">${iconHTML}</div>
+                                <div class="h-info">
+                                    <div class="h-token-name">${item.token}</div>
+                                    <div class="h-net-badge" style="color:${color}">${net ? net.name : item.network}</div>
+                                </div>
+                            </div>
+                            <div class="h-right">
+                                <div class="h-amount ${amountClass}">${sign} ${parseFloat(item.amount).toFixed(6)} ${item.token}</div><div class="h-usd">≈ $${Number(item.usdValue || 0).toFixed(2)} USDT</div>
+                            </div>
+                        </div>
+                        <div class="h-footer">
+                            <span class="h-address" title="${addr || ''}">${addr || '-'}</span>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span class="h-time">${timeStr}</span>
+                                <span class="h-status ${statusClass}">${statusText}</span>
+                                <a href="https://etherscan.io/tx/${item.hash}" target="_blank" class="h-link">🔍</a>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+            historyContainer.innerHTML = html;
+        }
+
+        function addToHistory(hash, type, netKey, tokKey, amount, toAddr) {
+            const tok = TOKENS[netKey]?.[tokKey];
+            if (!tok) return;
+            txHistoryRaw.unshift({
+                hash, network: netKey, token: tok.symbol, tokenAddress: tok.address,
+                amount, from: walletAddress, to: toAddr, type,
+                block: 0, timestamp: Date.now(), status: 'success', price: Number(priceCache[tok.coingeckoId]?.usd || 0), usdValue: Number(amount) * Number(priceCache[tok.coingeckoId]?.usd || 0)
+            });
+            applyHistoryFilters();
+        }
+
+        // History network tabs
+        document.querySelectorAll('#historyNetworkTabs .net-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('#historyNetworkTabs .net-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                activeHistoryNetwork = tab.dataset.net;
+                applyHistoryFilters();
+            });
+        });
+
+        // History search
+        historySearch.addEventListener('input', (e) => {
+            historySearchQuery = e.target.value.trim();
+            applyHistoryFilters();
+        });
+
+        refreshHistoryBtn.addEventListener('click', () => {
+            if (walletAddress) { fetchTransactionHistory(walletAddress, true); }
+        });
+
+        // ============================================================
+        //  TABS
+        // ============================================================
+        document.querySelectorAll('.tabs button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                const target = $(btn.dataset.tab);
+                if (target) target.classList.add('active');
+                if (btn.dataset.tab !== 'tabSend') { stopAllScanners(); }
+                if (btn.dataset.tab === 'tabHistory' && walletAddress && txHistoryRaw.length === 0) {
+                    fetchTransactionHistory(walletAddress, true);
+                }
+            });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                stopAllScanners();
+                if (broadcastTimer) {
+                    clearInterval(broadcastTimer); broadcastTimer = null;
+                    isBroadcasting = false;
+                    countdownContainer.classList.add('hidden');
+                    broadcastBtn.disabled = false;
+                    showToast('تم إلغاء البث', 'info');
+                }
+            }
+        });
+
+        console.log('%cمحفظة متعددة الشبكات - جاهزة', 'color: #3b82f6; font-size: 14px; font-weight: bold;');
+    
+// Theme and language controls
+const UI_TEXT={ar:{wallet:'Wallet',loginSub:'أدخل المفتاح الخاص وبيانات حماية المحفظة',openWallet:'فتح المحفظة',loginNote:'سيُحفظ المفتاح الخاص مشفرًا محليًا ولا يُخزن بصورته المكشوفة',logout:'خروج',totalValue:'القيمة الإجمالية',overview:'نظرة عامة',receive:'استقبال',send:'إرسال',history:'السجل',receiveTitle:'عنوان الاستقبال',receiveAddressLabel:'عنوان المحفظة',copy:'نسخ',historyTitle:'سجل المعاملات',refresh:'تحديث'},en:{wallet:'Wallet',loginSub:'Enter your private key and wallet protection details',openWallet:'Open Wallet',loginNote:'The private key is stored locally in encrypted form',logout:'Logout',totalValue:'Total Value',overview:'Overview',receive:'Receive',send:'Send',history:'History',receiveTitle:'Receive Address',receiveAddressLabel:'Wallet Address',copy:'Copy',historyTitle:'Transaction History',refresh:'Refresh'}};
+let currentLang=localStorage.getItem('walletLang')||'ar';
+let currentTheme=localStorage.getItem('walletTheme')||'light';
+function applyUILanguage(){const t=UI_TEXT[currentLang];document.documentElement.lang=currentLang;document.documentElement.dir=currentLang==='ar'?'rtl':'ltr';document.querySelectorAll('[data-i18n]').forEach(el=>{if(t[el.dataset.i18n])el.textContent=t[el.dataset.i18n];});$('languageToggle').textContent=currentLang==='ar'?'EN':'AR';$('themeToggle').textContent=currentTheme==='light'?'☾':'☀';historySearch.placeholder=currentLang==='ar'?'ابحث بالعنوان أو الهاش...':'Search by address or hash...';}
+function applyUITheme(){document.body.classList.toggle('theme-dark',currentTheme==='dark');document.body.classList.toggle('theme-light',currentTheme==='light');applyUILanguage();}
+$('languageToggle').addEventListener('click',()=>{currentLang=currentLang==='ar'?'en':'ar';localStorage.setItem('walletLang',currentLang);applyUILanguage();applyHistoryFilters();});
+$('themeToggle').addEventListener('click',()=>{currentTheme=currentTheme==='light'?'dark':'light';localStorage.setItem('walletTheme',currentTheme);applyUITheme();});
+applyUITheme();
+
+</script>
+</body>
+</html>
